@@ -171,7 +171,26 @@ def main(model_cfg: DictConfig) -> None:
             scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.training.optimizer.grad_clip)
 
-        
+        # step the optimizer and scaler if training in fp16
+        scaler.step(optimizer)
+        scaler.update()
+
+        # flush gradients asap
+        optimizer.zero_grad(set_to_none=True)
+
+        # timing and logging
+        t1 = time.time()
+        dt = t1 - t0 
+        t0 = t1
+        if not iter_num % cfg.training.log_interval:
+            lossf = loss.item() * cfg.training.gradient_accumulation_steps
+            print(f"step {iter_num}: loss {lossf:.4f}, lr {lr:.1e}, dt {dt:.1f}s")
+
+        iter_num += 1
+
+
+        if iter_num > cfg.training.max_steps:
+            break        
 
 
 
