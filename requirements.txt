@@ -1,0 +1,4 @@
+fastai
+datasets
+tqdm
+tiktoken==0.6.0
