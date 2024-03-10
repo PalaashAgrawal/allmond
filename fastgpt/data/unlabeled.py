@@ -1,18 +1,13 @@
-# This file contains the code for downloading and processing the unlabeled text datasets.
-import os
-import sys
-import time
-import argparse
-
-
 import datasets
+from tqdm import tqdm 
+import numpy as np
+import os
 
 
+dset = 'openwebtext'
 
-unlabeled_text_datasets = ['openwebtext']
 
-
-def get_dataset(dataset_name: str, n_proc = 8):
+class unlabeledDataset():
     '''
     given huggingface dataset name, download the dataset using the datasets library
     dataset_name (str): name of the dataset to download (usually in the format "author/dataset_name")
@@ -20,21 +15,91 @@ def get_dataset(dataset_name: str, n_proc = 8):
     
     returns:
     datasets.Dataset: The downloaded dataset. Containing the train, and optionally the test and validation splits, each in the form of <class 'datasets.arrow_dataset.Dataset'>
+    
+    TODO:
+    1. Add support for batch processing in datasets.map (batched = True) (see source code https://github.com/huggingface/datasets/blob/2.18.0/src/datasets/arrow_dataset.py#L2867)
     '''
     
-    # Check if the dataset exists
+    def __init__(self, dataset_name: str, n_proc = 8, **kwargs):
+        # Check if the dataset exists
+        
+        # Load the dataset
+        self.n_proc = n_proc
+        self.dataset = datasets.load_dataset(dataset_name, num_proc = self.n_proc, **kwargs)
+        self.train, self.val = self.split()
+        
+    def split(self, pct = 0.9995, val_name = 'val'):
+        '''
+        Split the dataset into training and validation sets.
+        pct (float): The percentage of the dataset to use for the training set. Defaults to 0.9995.
+        val_name (str): The name to use for the validation set. Defaults to 'val'. Other popular names "validation", "dev", "test". 
+        
+        returns:
+        datasets.Dataset: The training set.
+        datasets.Dataset: The validation set.
+        '''
+        
+        self.dataset = self.dataset['train'].train_test_split(test_size = 1-pct)
+        self.dataset[f'{val_name}'] = self.dataset.pop('test') #rename the test set to val
+        
+        return self.dataset['train'], self.dataset['val']
     
-    # Load the dataset
-    dataset = datasets.load_dataset(dataset_name, num_proc = n_proc, trust_remote_code=True)
     
+    def tokenize(self, encoder_fn, save_tokens_to_disk = True):
+        """
+        Returns a function that applies the given process_function (tokenizer) to the dataset,
+        with text extracted automatically inside the wrapper function.
+        """
+        
+        def _token_mapper(f, example):
+            """
+            A wrapper function that can be customized to work with different process functions.
+            It directly takes an example, allowing process_function to work on the text.
+            """
+            return f(example['text'])
 
-    return dataset    
+        self.tokens = self.dataset.map(lambda example: _token_mapper(encoder_fn, example), 
+                                remove_columns=['text'], 
+                                desc="tokenizing the splits", 
+                                # num_proc=self.n_proc, #n_proc>1 throws internal error
+                                )
+        
+        if save_tokens_to_disk: self._save_tokens_to_disk(self.tokens)
+        
+        return self.tokens
+        
+        
+    def _save_tokens_to_disk(self, tokens, num_shards = 1024):
+        """
+        Save the tokenized dataset to disk.
+        TODO: save tokens to .cache or /data directory
+        """
+        for split, dset in tokens.items():
+            arr_len = np.sum(dset['len'], dtype=np.uint64)
+            filename = os.path.join(os.path.dirname(__file__), f'{split}.bin')
+            arr = np.memmap(filename, dtype=np.uint64, mode='w+', shape=(arr_len,))
+            
+            idx = 0
+            for batch_idx in tqdm(range(num_shards), desc = f'writing {filename}'):
+                #batch together samples for faster write
+                batch = dset.shard(num_shards = num_shards, index = batch_idx, contiguous = True).with_format('numpy')
+                arr_batch = np.concatenate(batch['ids'])
+                #write into memmap
+                arr[idx:idx+len(arr_batch)] = arr_batch
+                idx += len(arr_batch)
+            
+            #save to disk
+            arr.flush()        
+            del arr #close the memmap
+                
 
+
+    
 
 
 
 class TiktokenTokenizer():
-    "SentencePiece tokenizer for `lang`"
+    "Tiktoken tokenizer for `lang`"
     def __init__(self, from_model = "gpt2"):
         """
         Initialize the TiktokenTokenizer class.
@@ -57,7 +122,7 @@ class TiktokenTokenizer():
         return self.n_vocab()
     
     
-    def encode(self, text: str, ignore_special_tokens = True, batch=True):
+    def encode(self, text: str, ignore_special_tokens = True, batch=False):
         
         """
         Encodes the given text into tokenized format.
@@ -75,12 +140,23 @@ class TiktokenTokenizer():
         TODO: 
         1. accomodate all methods from tiktoken. 
         2. write function to automatically detect whether batches arrive as single peice or in batches. Batches can be both lists or dataloader generator objecst. How do you unify the representation of lists and dataloader generator objects?
-    
+        3. Make API compatible with fastai text API
         
         """
         
-        if batch: return self.encode_batch(text) if ignore_special_tokens else self.encode_batch(text) 
+        if batch: return self.encode_ordinary_batch(text) if ignore_special_tokens else self.encode_batch(text) 
         else: return self.encode_ordinary(text) if ignore_special_tokens else self.encode(text)
+        
+    
+    def tokenize_dataset(self, text):
+        f'text is a row from Datasets.Dataset object.'
+            
+            
+        ids = self.encode(text, ignore_special_tokens = True)
+        ids.append(self.encoder.eot_token)#add the end of text token, e.g. 50256 for gpt2 bpe
+        # note acc to Karpath. BUT WHY?: I think eot should be prepended not appended... hmm. it's called "eot" though...
+        out = {'ids': ids, 'len': len(ids)}
+        return out
         
         
         
@@ -102,6 +178,7 @@ class TiktokenTokenizer():
         
         
         
+    
         
         
 
@@ -116,18 +193,20 @@ class TiktokenTokenizer():
         Raises:
             AttributeError: If the attribute does not exist.
         """
-        if hasattr(self, name): return getattr(self, name)
-        elif hasattr(self.encoder, name): return getattr(self.encoder, name)
+        if hasattr(self.encoder, name): return getattr(self.encoder, name)
         else: raise AttributeError(f"Missing attribute {name} for object of class 'TiktokenTokenizer'")
     
     
     
 
 if __name__ == "__main__":
-    n_procs = os.cpu_count()//2
+    # n_procs = os.cpu_count()//2
+    n_procs =15
     
+    encoder = TiktokenTokenizer()
 
-    for dataset in unlabeled_text_datasets: 
-        ds = get_dataset(dataset, n_procs)
-        print(ds["train"].__class__)
+    # for dataset in unlabeled_text_datasets: 
+    ds = unlabeledDataset(dset, n_procs)
+    toks = ds.tokenize(encoder.tokenize_dataset, save_tokens_to_disk = True)
+    
         
