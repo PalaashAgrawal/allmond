@@ -2,11 +2,24 @@ import datasets
 from tqdm import tqdm 
 import numpy as np
 import os
+from pathlib import Path
+
+
+#import config from ../config/data.yaml
+import sys
+sys.path.append('..')
 
 
 dset = 'openwebtext'
 
 
+class OpenWebTextConfig():
+    dataset_name = 'openwebtext'
+    default_cache_dir = Path('~/.cache/tinyUniverse/pretraining_data/').expanduser()
+    split_into_train_val = True
+    split_name = 'val' #Optional
+    
+    
 class unlabeledDataset():
     '''
     given huggingface dataset name, download the dataset using the datasets library
@@ -20,13 +33,41 @@ class unlabeledDataset():
     1. Add support for batch processing in datasets.map (batched = True) (see source code https://github.com/huggingface/datasets/blob/2.18.0/src/datasets/arrow_dataset.py#L2867)
     '''
     
-    def __init__(self, dataset_name: str, n_proc = 8, **kwargs):
-        # Check if the dataset exists
+    def __init__(self, datasetConfig: OpenWebTextConfig, n_proc=8, cache_dir=None, force_redownload = False, **kwargs):
+        """
+        Initialize the UnlabeledDataLoader object.
+
+        Args:
+            dataset_name (str): The name of the dataset to load. 
+                See dataset.list_datasets (https://huggingface.co/docs/datasets/v2.18.0/en/package_reference/loading_methods#datasets.list_datasets) 
+                for list of all available datasets
+            n_proc (int): The number of processes to use for loading the dataset.
+            cache_dir (str): The directory to cache (save/read/write) the dataset. Defaults to None. If cache_dir is None, value from config class is used. 
+            **kwargs: Additional keyword arguments to pass to the dataset loader.
+        """
         
         # Load the dataset
+        super().__init__()
+        
+        self.config = datasetConfig
         self.n_proc = n_proc
-        self.dataset = datasets.load_dataset(dataset_name, num_proc = self.n_proc, **kwargs)
-        self.train, self.val = self.split()
+        self.cache_dir = Path(cache_dir or datasetConfig.default_cache_dir)
+        self.force_redownload = force_redownload
+        
+        if self.cache_dir is not None: self.cache_dir.mkdir(parents=True, exist_ok=True)
+                
+        
+        self.dataset = datasets.load_dataset(
+                                            self.config.dataset_name,
+                                            num_proc=self.n_proc,
+                                            trust_remote_code=True,
+                                            cache_dir=self.cache_dir,
+                                            download_mode = 'force_redownload' if self.force_redownload else 'reuse_cache_if_exists',
+                                            **kwargs
+                                            )
+        if getattr(self.config, 'split_into_train_val', True): 
+            self.train, self.val = self.split(val_name = getattr(self.config, 'split_name', 'val')) #by default, split the dataset into train and val sets
+        
         
     def split(self, pct = 0.9995, val_name = 'val'):
         '''
@@ -39,61 +80,120 @@ class unlabeledDataset():
         datasets.Dataset: The validation set.
         '''
         
+        self.val_name = val_name
+        
         self.dataset = self.dataset['train'].train_test_split(test_size = 1-pct)
-        self.dataset[f'{val_name}'] = self.dataset.pop('test') #rename the test set to val
+        self.dataset[f'{self.val_name}'] = self.dataset.pop('test') #rename the test set to val
         
-        return self.dataset['train'], self.dataset['val']
+        
+        self.splits = self.dataset.keys()
+        
+        return (self.dataset[key] for key in self.splits)
     
     
-    def tokenize(self, encoder_fn, save_tokens_to_disk = True):
+    def tokenize(self, encoder_fn, save_tokens_to_disk = True, save_path = None):
         """
-        Returns a function that applies the given process_function (tokenizer) to the dataset,
+        Applies the given process_function (tokenizer) to the dataset,
         with text extracted automatically inside the wrapper function.
+        
+        Returns: None if save_tokens_to_disk is True. (saves tokens to disk. Use these files directly)
+        Else, returns the tokenized dataset.
         """
         
-        def _token_mapper(f, example):
+        def _text_extractor(f, example):
             """
             A wrapper function that can be customized to work with different process functions.
             It directly takes an example, allowing process_function to work on the text.
             """
             return f(example['text'])
+        
+        
+        if self._check_data_on_disk():
+            print(f'Tokenized dataset already exists at {self.cache_dir}. You can load the tokenized dataset directly from disk.')
+            return None
+            
 
-        self.tokens = self.dataset.map(lambda example: _token_mapper(encoder_fn, example), 
-                                remove_columns=['text'], 
-                                desc="tokenizing the splits", 
-                                # num_proc=self.n_proc, #n_proc>1 throws internal error
-                                )
+        self.tokens = self.dataset.map(lambda example: _text_extractor(encoder_fn, example), 
+                                       remove_columns=['text'], 
+                                       desc="tokenizing the splits", 
+                                       num_proc=self.n_proc, )
         
-        if save_tokens_to_disk: self._save_tokens_to_disk(self.tokens)
+        if save_tokens_to_disk: self._save_tokens_to_disk(self.tokens, path = save_path)
+        else: return self.tokens
         
-        return self.tokens
-        
-        
-    def _save_tokens_to_disk(self, tokens, num_shards = 1024):
+    
+    def _save_tokens_to_disk(self,  tokens, num_shards=1024, path =None):
         """
-        Save the tokenized dataset to disk.
-        TODO: save tokens to .cache or /data directory
+        Save the tokenized dataset to disk. 
+
+        Args:
+            tokens (dict): A dictionary containing the tokenized dataset.
+            num_shards (int, optional): The number of shards to split the dataset into. Defaults to 1024.
+            path (Optional, str or Pathlike): location where tokens will be saved. By default, it is saved in the self.cache_dir.
+
+        Returns: None
+
+        Notes:
+            This method saves the tokenized dataset to disk by splitting it into multiple shards.
+            Each shard is saved as a binary file with the format '<split>.bin', where '<split>' is the name of the dataset split.
+            The tokenized data is stored in a numpy memmap array for efficient storage and retrieval.
+
+        TODO:
+            1. if .bin files already exist, directly load tokenized dataset. See if self._load_tokenized_from_bin works?
         """
+        
+        save_pth = Path(path or self.cache_dir)
+        
+        
         for split, dset in tokens.items():
+            
             arr_len = np.sum(dset['len'], dtype=np.uint64)
-            filename = os.path.join(os.path.dirname(__file__), f'{split}.bin')
+            filename = save_pth/f'{split}.bin'
+            
             arr = np.memmap(filename, dtype=np.uint64, mode='w+', shape=(arr_len,))
-            
+
             idx = 0
-            for batch_idx in tqdm(range(num_shards), desc = f'writing {filename}'):
-                #batch together samples for faster write
-                batch = dset.shard(num_shards = num_shards, index = batch_idx, contiguous = True).with_format('numpy')
+            for batch_idx in tqdm(range(num_shards), desc=f'writing {filename}'):
+                # batch together samples for faster write
+                batch = dset.shard(num_shards=num_shards, index=batch_idx, contiguous=True).with_format('numpy')
                 arr_batch = np.concatenate(batch['ids'])
-                #write into memmap
-                arr[idx:idx+len(arr_batch)] = arr_batch
+                # write into memmap
+                arr[idx:idx + len(arr_batch)] = arr_batch
                 idx += len(arr_batch)
-            
-            #save to disk
-            arr.flush()        
-            del arr #close the memmap
+
+            # save to disk
+            arr.flush()
+
+    def _check_data_on_disk(self):
+        return not self.force_redownload and all((self.cache_dir/f'{split}.bin').exists() for split in self.splits)
+    
                 
+    def _load_tokenized_from_bin(self, split, path=None):
+        """
+        Load the tokenized dataset from disk.
 
+        Args:
+            split (str): The name of the dataset split to load.
+            path (Optional, str or Pathlike): The location where the tokenized dataset is saved. Defaults to None.
 
+        Returns:
+            np.memmap: The tokenized dataset loaded from disk.
+
+        Raises:
+            FileNotFoundError: If the tokenized dataset is not found on disk.
+
+        Notes:
+            This method loads the tokenized dataset from disk.
+            The tokenized data is stored in a numpy memmap array for efficient storage and retrieval.
+        """
+            
+        load_pth = Path(path or self.cache_dir)
+        filename = load_pth/f'{split}.bin'
+        
+        if not filename.exists():
+            raise FileNotFoundError(f"Tokenized dataset not found at {filename}")
+        
+        return np.memmap(filename, dtype=np.uint64, mode='r', shape=(len(self.dataset[split]),))
     
 
 
@@ -119,7 +219,7 @@ class TiktokenTokenizer():
             int: The vocabulary size.
         """
         
-        return self.n_vocab()
+        return self.encoder.n_vocab()
     
     
     def encode(self, text: str, ignore_special_tokens = True, batch=False):
@@ -135,8 +235,6 @@ class TiktokenTokenizer():
         Returns:
             list or list of lists: The encoded tokenized representation of the input text.
 
-
-
         TODO: 
         1. accomodate all methods from tiktoken. 
         2. write function to automatically detect whether batches arrive as single peice or in batches. Batches can be both lists or dataloader generator objecst. How do you unify the representation of lists and dataloader generator objects?
@@ -144,8 +242,8 @@ class TiktokenTokenizer():
         
         """
         
-        if batch: return self.encode_ordinary_batch(text) if ignore_special_tokens else self.encode_batch(text) 
-        else: return self.encode_ordinary(text) if ignore_special_tokens else self.encode(text)
+        if batch: return self.encoder.encode_ordinary_batch(text) if ignore_special_tokens else self.encoder.encode_batch(text) 
+        else: return self.encoder.encode_ordinary(text) if ignore_special_tokens else self.encoder.encode(text)
         
     
     def tokenize_dataset(self, text):
@@ -158,8 +256,7 @@ class TiktokenTokenizer():
         out = {'ids': ids, 'len': len(ids)}
         return out
         
-        
-        
+             
     def decode(self, tokens: list, ignore_special_tokens = True, batch=True):
         """
         Decodes the given tokens into text.
@@ -169,44 +266,22 @@ class TiktokenTokenizer():
             ignore_special_tokens (bool): Whether to ignore special tokens during decoding. Defaults to True.
             batch (bool): Whether to decode the tokens in batch mode. Defaults to True.
         
-        Returns:
-            str or list of str: The decoded text representation of the input tokens.
+        Returns: str or list of str: The decoded text representation of the input tokens.
         """
         
-        if batch: return self.decode_batch(tokens) if ignore_special_tokens else self.decode_batch(tokens) 
-        else: return self.decode_ordinary(tokens) if ignore_special_tokens else self.decode(tokens)
+        if batch: return self.encoder.decode_batch(tokens) if ignore_special_tokens else self.encoder.decode_batch(tokens) 
+        else: return self.encoder.decode_ordinary(tokens) if ignore_special_tokens else self.encoder.decode(tokens)
         
-        
-        
-    
-        
-        
-
-    #import all functionalities from self.encoder as methods of this class, if they dont exist in the class already
-    def __getattr__(self, name):
-        """
-        Get the attribute from self.encoder if it exists, otherwise raise an AttributeError.
-        Args:
-            name (str): The name of the attribute.
-        Returns:
-            Any: The attribute value.
-        Raises:
-            AttributeError: If the attribute does not exist.
-        """
-        if hasattr(self.encoder, name): return getattr(self.encoder, name)
-        else: raise AttributeError(f"Missing attribute {name} for object of class 'TiktokenTokenizer'")
-    
-    
-    
 
 if __name__ == "__main__":
-    # n_procs = os.cpu_count()//2
-    n_procs =15
-    
-    encoder = TiktokenTokenizer()
+    n_procs = max(1, int(os.cpu_count()-2))
+
+    encoder = TiktokenTokenizer()    
+
 
     # for dataset in unlabeled_text_datasets: 
-    ds = unlabeledDataset(dset, n_procs)
-    toks = ds.tokenize(encoder.tokenize_dataset, save_tokens_to_disk = True)
+    ds = unlabeledDataset(OpenWebTextConfig(), n_procs)
+    ds.tokenize(encoder.tokenize_dataset, save_tokens_to_disk = True)
+    
     
         
