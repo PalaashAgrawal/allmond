@@ -4,15 +4,6 @@ import numpy as np
 import os
 from pathlib import Path
 
-
-#import config from ../config/data.yaml
-import sys
-sys.path.append('..')
-
-
-dset = 'openwebtext'
-
-
 class OpenWebTextConfig():
     dataset_name = 'openwebtext'
     default_cache_dir = Path('~/.cache/tinyUniverse/pretraining_data/').expanduser()
@@ -194,8 +185,6 @@ class unlabeledDataset():
             raise FileNotFoundError(f"Tokenized dataset not found at {filename}")
         
         return np.memmap(filename, dtype=np.uint64, mode='r', shape=(len(self.dataset[split]),))
-    
-
 
 
 class TiktokenTokenizer():
@@ -274,14 +263,9 @@ class TiktokenTokenizer():
         
 
 if __name__ == "__main__":
-    n_procs = max(1, int(os.cpu_count()-2))
+    n_procs = max(1, int(os.cpu_count()-2)) #leave atleast 2 cores for other processes
 
     encoder = TiktokenTokenizer()    
 
-
-    # for dataset in unlabeled_text_datasets: 
     ds = unlabeledDataset(OpenWebTextConfig(), n_procs)
-    ds.tokenize(encoder.tokenize_dataset, save_tokens_to_disk = True)
-    
-    
-        
+    ds.tokenize(encoder.tokenize_dataset, save_tokens_to_disk = True) 
