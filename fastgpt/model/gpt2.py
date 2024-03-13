@@ -2,11 +2,60 @@ from torch import nn
 import torch
 import torch.nn.functional as F
 
+
+
+class MultiHeadSelfAttention(nn.Module):
+    'Why the fuck is self attention not defined in Pytorch API??'
+    
+    def __init__(self, embed_dim, num_heads, dropout=0.0, bias=True, add_bias_kv=False, add_zero_attn=False, kdim=None, vdim=None, 
+                 batch_first=True, #by default is TRUE 
+                 device=None, dtype=None,
+                 is_causal = True,
+                 block_size = None):
+        
+         
+        
+        super().__init__()
+        
+        self.k = nn.Linear(embed_dim, embed_dim)
+        self.q = nn.Linear(embed_dim, embed_dim)
+        self.v = nn.Linear(embed_dim, embed_dim)
+        
+        self.is_causal = is_causal
+        
+        self.multiheadattn = nn.MultiheadAttention( embed_dim, num_heads, dropout=dropout, bias=bias, add_bias_kv=add_bias_kv, 
+                                                    add_zero_attn=add_zero_attn, kdim=kdim, vdim=vdim, 
+                                                    batch_first=batch_first, #by default is TRUE 
+                                                    device=device,  dtype=dtype)
+        
+        if self.is_causal:
+            
+            assert block_size, 'block_size must be provided for causal attention'
+            assert batch_first, 'Causal attention is only implemented for batch_first = True'
+            self.register_buffer('causal_mask', torch.tril(torch.ones(block_size, block_size)))
+            
+        
+    def forward(self, x):
+        attn_mask = self.causal_mask if self.is_causal else None
+        # print(attn_mask)
+        
+        k,q,v = self.k(x), self.q(x), self.v(x) #B, T, n_embd
+        return self.multiheadattn(q, k, v, attn_mask = attn_mask)
+    
+        
+        
+        
+        
+        
+        
+        
+    
 class MLP(nn.Module):
     def __init__(self, n_embd: int, 
                  n_hidden: int = None,
                  dropout: float = 0.0, 
                  bias = False):
+        
         """
         Initializes the GPT2 model.
         
@@ -27,23 +76,24 @@ class MLP(nn.Module):
         
     def forward(self, x):
         
-        x = self.fc(x)
+        x = self.residual_fc(x)
         x = self.gelu(x)
-        x = self.projection(x)
+        x = self.residual_projection(x)
         x = self.dropout(x)
-        return 
-        
+        return x
+
+
 class TransformerBlock(nn.Module):
     f'Implementation of the (Decoder only) block of the transformer'
-    def __init__(self, n_embd, n_heads, dropout = 0.0, bias = False):
+    def __init__(self, n_embd, n_heads, dropout = 0.0, bias = False, apply_causal_mask = True, block_size = None):
         super().__init__()
         self.layernorm1 = nn.LayerNorm(n_embd, bias = bias)
-        self.attn = nn.MultiheadAttention(n_embd, n_heads, dropout = 0.0, bias = bias)
+        self.attn = MultiHeadSelfAttention(n_embd, n_heads, dropout = 0.0, bias = bias, is_causal=apply_causal_mask, block_size = block_size)
         self.layernorm2 = nn.LayerNorm(n_embd, bias = bias)
         self.mlp = MLP(n_embd, dropout = dropout, bias = bias)
         
     
-    def forward(self, x, apply_causal_mask = True):
+    def forward(self, x, ):
         """
         Forward pass for the transformer block.
         if apply_causal_mask is True, then the attention layer will only attend to the previous tokens, not the future tokens.
@@ -51,7 +101,7 @@ class TransformerBlock(nn.Module):
         TODO: should flash attention be enabled once globally in GPT.forward() or should it be applied in each transformer block?
         """
         # with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False):
-        x = x + self.attn(self.layernorm1(x), is_causal = apply_causal_mask) #pre-normalization
+        x = x + self.attn(self.layernorm1(x))[0] #pre-normalization
         x = x + self.mlp(self.layernorm2(x)) 
         return x            
         
@@ -86,11 +136,13 @@ class GPT(nn.Module):
         self.vocab_size = vocab_size
         self.n_layer = n_layer
         
-        
         self.wte = nn.Embedding(vocab_size, n_embd) # token embedding
         self.wpe = nn.Embedding(block_size, n_embd) # positional embedding
         self.dropout = nn.Dropout(dropout)
-        self.layers = nn.ModuleList([TransformerBlock(n_embd, n_head, dropout, bias) for _ in range(n_layer)])
+        self.layers = nn.ModuleList([TransformerBlock(n_embd, n_head, dropout, bias, 
+                                                      apply_causal_mask = True, 
+                                                      block_size=self.block_size) 
+                                     for _ in range(n_layer)])
         
         self.layernorm_final = nn.LayerNorm(n_embd, bias = bias)
         self.head = nn.Linear(n_embd, vocab_size, bias = bias)
@@ -107,19 +159,25 @@ class GPT(nn.Module):
         assert t<=self.block_size, f'Cannot forward, model block size is exhausted. Model block size is {self.block_size}, but input sequence length is {t}.'
         pos = torch.arange(t, dtype = torch.long, device = idx.device) #shape (t,)
         
-        x = self.dropout(self.wte(idx) + self.wpe(pos)) #token_emb + pos_emb. shape (b,t,n_embd)
+        x = self.wpe(pos)
+        x = x+ self.wte(idx)
+        x = self.dropout(x) 
+        
         for block in self.layers: x = block(x)
         x = self.layernorm_final(x)
         
-        if targets is not None:
-            logits = self.head(x)
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
-        else:
-            #during inference, we don't have targets. We just return the logits.
-            logits = self.head(x[:, [-1], :]) #note: using list[-1] to preserve the time dimension. out shape (b,1,vocab_size)
-            loss = None
+        
+        
+        # if targets is not None:
+        #     logits = self.head(x)
+        #     loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+        # else:
+        #     #during inference, we don't have targets. We just return the logits.
+        #     logits = self.head(x[:, [-1], :]) #note: using list[-1] to preserve the time dimension. out shape (b,1,vocab_size)
+        #     loss = None
             
-        return logits, loss
+        # return logits, loss
+        return self.head(x)
             
     
     def get_num_params(self, non_embedding=True):
