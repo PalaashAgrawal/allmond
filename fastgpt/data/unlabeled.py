@@ -11,6 +11,9 @@ class OpenWebTextConfig():
     split_name = 'val' #Optional
     
     
+    
+    
+    
 class unlabeledDataset():
     '''
     given huggingface dataset name, download the dataset using the datasets library
@@ -185,6 +188,14 @@ class unlabeledDataset():
             raise FileNotFoundError(f"Tokenized dataset not found at {filename}")
         
         return np.memmap(filename, dtype=np.uint64, mode='r', shape=(len(self.dataset[split]),))
+
+
+
+
+
+
+
+
 
 
 class TiktokenTokenizer():
