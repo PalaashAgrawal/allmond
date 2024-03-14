@@ -1,4 +1,5 @@
 fastai
 datasets
+accelerate
 tqdm
 tiktoken==0.6.0
