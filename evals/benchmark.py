@@ -87,7 +87,13 @@ class FauxModel:
 
     def predict(self, batch, output_token=None):
         """Pass"""
-        return ["D"] * len(batch)
+        if output_token:
+            if type(output_token) == list and type(output_token[0]) == list:
+                return [output_token[i][0] for i in range(len(batch))]
+            elif type(output_token) == list:
+                return [output_token[0]] * len(batch)
+        else:
+            return ["A"]*len(batch)
 
     def encode(self, sentences, batch_size=32, **kwargs):
         """

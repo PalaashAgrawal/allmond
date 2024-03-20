@@ -41,6 +41,7 @@ class ARC(benchmark.Benchmark):
         # batch together samples for inference
         batch_prompts = []
         batch_labels = []
+        batch_options = []
         for sample in tqdm.tqdm(self.base_dataset):
             options = sample["choices"]["label"]
             option_text = []
@@ -53,12 +54,14 @@ class ARC(benchmark.Benchmark):
             label = str(sample["answerKey"])
             batch_prompts.append(prompt)
             batch_labels.append(label)
+            batch_options.append(options)
             if len(batch_prompts) == batch_size:
-                predictions = self.model.predict(batch_prompts, output_token=options)
+                predictions = self.model.predict(batch_prompts, output_token=batch_options)
                 targets = batch_labels
                 acc_metric.batched_accumulate(predictions, targets)
                 batch_prompts = []
                 batch_labels = []
+                batch_options = []
         return acc_metric.aggregate()
 
 
