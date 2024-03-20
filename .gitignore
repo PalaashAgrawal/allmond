@@ -2,3 +2,4 @@
 data/eval/*
 !data/eval/README.md
 *.DS_Store
+checkpoints
