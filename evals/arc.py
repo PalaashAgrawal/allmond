@@ -6,7 +6,7 @@ from datasets import load_dataset
 
 import benchmark
 
-VITAMINC_PROMPT = """Read this question and use your common sense to answer it.
+ARC_PROMPT = """Read this question and use your common sense to answer it.
 Your answer should be either A,B,C where:
 A: Supports
 B: Does not support
@@ -46,7 +46,7 @@ class ARC(benchmark.Benchmark):
             option_text = []
             for i, option in enumerate(sample["choices"]["text"]):
                 option_text.append(f"{options[i]}: \"{option}\"")
-            prompt = VITAMINC_PROMPT.format(
+            prompt = ARC_PROMPT.format(
                 question=sample["question"],
                 options="\n".join(option_text)
             )
