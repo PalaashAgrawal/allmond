@@ -4,7 +4,7 @@ import tqdm
 
 from datasets import load_dataset
 
-import benchmark
+from evals import benchmark
 
 
 WINOGRAD_PROMPT = """A Winograd schema is a pair of sentences that differ in only one or two words and that contain an ambiguity that is resolved in opposite ways in the two sentences and requires the use of world knowledge and reasoning for its resolution.

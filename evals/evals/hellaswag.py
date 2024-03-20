@@ -4,7 +4,7 @@ import tqdm
 
 from datasets import load_dataset
 
-import benchmark
+from evals import benchmark
 
 HELLA_SWAG_PROMPT = """Your task is to pick the most plausible continuation of a story
 Example:

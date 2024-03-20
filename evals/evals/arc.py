@@ -4,7 +4,7 @@ import tqdm
 
 from datasets import load_dataset
 
-import benchmark
+from evals import benchmark
 
 ARC_PROMPT = """Read this question and use your common sense to answer it.
 Your answer should be either A,B,C where:

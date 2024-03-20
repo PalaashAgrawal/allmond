@@ -4,7 +4,7 @@ import tqdm
 
 from datasets import load_dataset
 
-import benchmark
+from evals import benchmark
 
 VITAMINC_PROMPT = """Read this claim and evidence and decide whether the evidence supports the claim.
 Your answer should be either A,B,C where:

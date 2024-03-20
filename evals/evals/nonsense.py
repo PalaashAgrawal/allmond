@@ -4,7 +4,7 @@ import tqdm
 
 from datasets import load_dataset
 
-import benchmark
+from evals import benchmark
 
 
 class Nonsense(benchmark.Benchmark):

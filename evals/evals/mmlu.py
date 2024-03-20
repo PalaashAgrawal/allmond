@@ -6,7 +6,7 @@ import requests
 import glob
 import pandas as pd
 
-import benchmark
+from evals import benchmark
 
 MMLU_PROMPT = """This problem is from the MMLU benchmark. In particular from the {title} subset.
 
