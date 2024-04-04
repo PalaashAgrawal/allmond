@@ -4,19 +4,24 @@ import numpy as np
 import os
 from pathlib import Path
 
+class WikipediaSimple():
+    dataset_name = 'wikipedia'
+    default_cache_dir = Path('~/.cache/tinyUniverse/pretraining_data/wikipedia_simple').expanduser()
+    split_into_train_val = True
+    split_name = 'val' #Optional
+    kwargs = {'name':'20220301.simple'}
+    
+
 class OpenWebTextConfig():
     dataset_name = 'openwebtext'
-    default_cache_dir = Path('~/.cache/tinyUniverse/pretraining_data/').expanduser()
+    default_cache_dir = Path('~/.cache/tinyUniverse/pretraining_data/openwebtext').expanduser()
     split_into_train_val = True
     split_name = 'val' #Optional
     
     
-<<<<<<< HEAD
-=======
     
     
     
->>>>>>> c8e2abc49ec715c163dd087067043ee01e672fa1
 class unlabeledDataset():
     '''
     given huggingface dataset name, download the dataset using the datasets library
@@ -30,7 +35,7 @@ class unlabeledDataset():
     1. Add support for batch processing in datasets.map (batched = True) (see source code https://github.com/huggingface/datasets/blob/2.18.0/src/datasets/arrow_dataset.py#L2867)
     '''
     
-    def __init__(self, datasetConfig: OpenWebTextConfig, n_proc=8, cache_dir=None, force_redownload = False, **kwargs):
+    def __init__(self, datasetConfig: OpenWebTextConfig, n_proc=8, cache_dir=None, force_redownload = False):
         """
         Initialize the UnlabeledDataLoader object.
 
@@ -60,8 +65,9 @@ class unlabeledDataset():
                                             trust_remote_code=True,
                                             cache_dir=self.cache_dir,
                                             download_mode = 'force_redownload' if self.force_redownload else 'reuse_cache_if_exists',
-                                            **kwargs
+                                            **getattr(self.config, 'kwargs',{}),
                                             )
+                                            
         if getattr(self.config, 'split_into_train_val', True): 
             self.train, self.val = self.split(val_name = getattr(self.config, 'split_name', 'val')) #by default, split the dataset into train and val sets
         
@@ -193,8 +199,6 @@ class unlabeledDataset():
         return np.memmap(filename, dtype=np.uint64, mode='r', shape=(len(self.dataset[split]),))
 
 
-<<<<<<< HEAD
-=======
 
 
 
@@ -203,7 +207,6 @@ class unlabeledDataset():
 
 
 
->>>>>>> c8e2abc49ec715c163dd087067043ee01e672fa1
 class TiktokenTokenizer():
     "Tiktoken tokenizer for `lang`"
     def __init__(self, from_model = "gpt2"):
