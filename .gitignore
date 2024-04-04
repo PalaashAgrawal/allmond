@@ -1,0 +1,4 @@
+#ignore all folders that start with "checkpoints"
+
+# In[ ]:
+checkpoints

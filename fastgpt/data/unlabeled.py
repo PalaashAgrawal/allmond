@@ -11,6 +11,12 @@ class OpenWebTextConfig():
     split_name = 'val' #Optional
     
     
+<<<<<<< HEAD
+=======
+    
+    
+    
+>>>>>>> c8e2abc49ec715c163dd087067043ee01e672fa1
 class unlabeledDataset():
     '''
     given huggingface dataset name, download the dataset using the datasets library
@@ -187,6 +193,17 @@ class unlabeledDataset():
         return np.memmap(filename, dtype=np.uint64, mode='r', shape=(len(self.dataset[split]),))
 
 
+<<<<<<< HEAD
+=======
+
+
+
+
+
+
+
+
+>>>>>>> c8e2abc49ec715c163dd087067043ee01e672fa1
 class TiktokenTokenizer():
     "Tiktoken tokenizer for `lang`"
     def __init__(self, from_model = "gpt2"):
