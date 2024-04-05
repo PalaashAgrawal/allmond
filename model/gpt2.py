@@ -46,12 +46,6 @@ class MultiHeadSelfAttention(nn.Module):
         
         
         
-<<<<<<< HEAD
-        
-        
-        
-=======
->>>>>>> c8e2abc49ec715c163dd087067043ee01e672fa1
     
 class MLP(nn.Module):
     def __init__(self, n_embd: int, 
@@ -180,13 +174,10 @@ class GPT(nn.Module):
         #     loss = None
             
         # return logits, loss
-<<<<<<< HEAD
-=======
     
     
     
     
->>>>>>> c8e2abc49ec715c163dd087067043ee01e672fa1
         return self.head(x)
             
     
@@ -269,12 +260,9 @@ class GPT(nn.Module):
         
         
         return model
-<<<<<<< HEAD
-=======
     
     
     def __str__(self): return 'gpt2'
->>>>>>> c8e2abc49ec715c163dd087067043ee01e672fa1
         
         
         

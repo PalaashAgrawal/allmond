@@ -1,4 +1,8 @@
-# tinyUniverse
-Collection of tinyUniverse
+PAg: Implementation of GPT using fastai. Logic -- from nanogpt by Karpathy: https://github.com/karpathy/nanoGPT
 
-Shared google drive: https://drive.google.com/drive/folders/1wE50V4uyos_e4p7hIF2ADijPqU3PmKfQ?usp=drive_link
+TODO:
+
+- Implement GPT as is on Wikipedia data
+- Extend API to multiple datasets, if user wants
+- Implement Heirarchical text data
+
