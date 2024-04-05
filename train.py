@@ -38,7 +38,7 @@ if __name__ == "__main__":
     dls = DataLoaders(train_dl, valid_dl)
     dls.c = model.head.out_features
     
-    check_and_save_model = save_model_checkpoints(dir = Path('checkpoints/models'), 
+    check_and_save_model = save_model_checkpoints(dir = Path('checkpoints'), 
                                                   model_name = str(model), 
                                                   checkpoint_name = 'gpt2', 
                                                   every_iters = 10000)

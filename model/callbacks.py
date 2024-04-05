@@ -1,5 +1,3 @@
-
-
 from fastai.text.all import *
 
 
@@ -69,6 +67,7 @@ class save_model_checkpoints(Callback):
 
             if loss < self.best_valid_loss:
                 self.best_valid_loss = loss
-                self.learn.save(f'{self.checkpoint_name}', with_opt=True)
+                self.learn.save(f'{self.checkpoint_name}', with_opt=True, with_iter = True)
+                
                 
 
