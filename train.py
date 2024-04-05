@@ -1,4 +1,4 @@
-from data.unlabeled import OpenWebTextConfig 
+from data.unlabeled import OpenWebTextConfig, TiktokenTokenizer
 from data.loader import OWTData, RandomSubsetSampler
 
 from model.gpt2 import GPT
@@ -10,6 +10,8 @@ from torch.utils.data import DataLoader
 
 
 
+
+
 if __name__ == "__main__":
     
     bs = 16
@@ -18,10 +20,13 @@ if __name__ == "__main__":
     
     
     
+    
     model = GPT(block_size=block_size)
     
-    train_ds = OWTData(OpenWebTextConfig().default_cache_dir/'train.bin'    ,block_size=block_size)
-    valid_ds = OWTData(OpenWebTextConfig().default_cache_dir/'val.bin'      ,block_size=block_size)
+    tokenizer = TiktokenTokenizer(from_model = "gpt2")
+    
+    train_ds = OWTData(OpenWebTextConfig().default_cache_dir/'train.bin'    ,block_size=block_size, dtype=tokenizer._get_numpy_dtype())
+    valid_ds = OWTData(OpenWebTextConfig().default_cache_dir/'val.bin'      ,block_size=block_size, dtype=tokenizer._get_numpy_dtype())
                        
     train_dl = DataLoader(train_ds, batch_size=bs)
     

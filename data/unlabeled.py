@@ -94,12 +94,12 @@ class unlabeledDataset():
         return (self.dataset[key] for key in self.splits)
     
     
-    def tokenize(self, encoder_fn, save_tokens_to_disk = True, save_path = None):
+    def tokenize(self, encoder_fn, save_tokens_to_disk = True, save_path = None, dtype = None):
         """
         Applies the given process_function (tokenizer) to the dataset,
         with text extracted automatically inside the wrapper function.
         
-        Returns: None if save_tokens_to_disk is True. (saves tokens to disk. Use these files directly)
+        Returns: None if save_tokens_to_disk is True. (saves tokens to disk using `dtype` format. Use these files directly)
         Else, returns the tokenized dataset.
         """
         
@@ -121,11 +121,11 @@ class unlabeledDataset():
                                        desc="tokenizing the splits", 
                                        num_proc=self.n_proc, )
         
-        if save_tokens_to_disk: self._save_tokens_to_disk(self.tokens, path = save_path)
+        if save_tokens_to_disk: self._save_tokens_to_disk(self.tokens, path = save_path, dtype = dtype)
         else: return self.tokens
         
     
-    def _save_tokens_to_disk(self,  tokens, num_shards=1024, path =None):
+    def _save_tokens_to_disk(self,  tokens, num_shards=1024, path =None, dtype = None):
         """
         Save the tokenized dataset to disk. 
 
@@ -147,13 +147,14 @@ class unlabeledDataset():
         
         save_pth = Path(path or self.cache_dir)
         
+        dtype = dtype or np.uint64
         
         for split, dset in tokens.items():
             
-            arr_len = np.sum(dset['len'], dtype=np.uint64)
+            arr_len = np.sum(dset['len'], dtype=dtype)
             filename = save_pth/f'{split}.bin'
             
-            arr = np.memmap(filename, dtype=np.uint64, mode='w+', shape=(arr_len,))
+            arr = np.memmap(filename, dtype=dtype, mode='w+', shape=(arr_len,))
 
             idx = 0
             for batch_idx in tqdm(range(num_shards), desc=f'writing {filename}'):
@@ -213,6 +214,8 @@ class TiktokenTokenizer():
         """
         Initialize the TiktokenTokenizer class.
         from_model (str): The model to use for encoding.
+        
+        by default, we use gpt2 tokenizer, which has 50,257 tokens
         """
         try: import tiktoken
         except ImportError:
@@ -266,21 +269,42 @@ class TiktokenTokenizer():
         return out
         
              
-    def decode(self, tokens: list, ignore_special_tokens = True, batch=True):
+    def decode(self, tokens: list, batch=True):
         """
         Decodes the given tokens into text.
         
         Args:
             tokens (list): The input tokens to be decoded.
-            ignore_special_tokens (bool): Whether to ignore special tokens during decoding. Defaults to True.
             batch (bool): Whether to decode the tokens in batch mode. Defaults to True.
+            
+            Note: there is no concept of ignore_special_tokens in decode. Whatever tokens we get, we can simply look them up in the vocabulary and return the corresponding string token.  
         
         Returns: str or list of str: The decoded text representation of the input tokens.
         """
         
-        if batch: return self.encoder.decode_batch(tokens) if ignore_special_tokens else self.encoder.decode_batch(tokens) 
-        else: return self.encoder.decode_ordinary(tokens) if ignore_special_tokens else self.encoder.decode(tokens)
+        return self.encoder.decode_batch(tokens) if batch else self.encoder.decode(tokens)
+        # if batch: return self.encoder.decode_batch(tokens) if ignore_special_tokens else self.encoder.decode_batch(tokens) 
+        # else: return self.encoder.decode_ordinary(tokens) if ignore_special_tokens else self.encoder.decode(tokens)
         
+    
+    def _get_numpy_dtype(self):
+        f'given the vocab size get the correct numpy dtype. Eg. You dont need uint64 for a vocab size of 50K, but only uint16.'
+        
+        vocab_size = self.encoder.n_vocab
+        
+        dtype_limits = [(np.uint8, np.iinfo(np.uint8).max),
+                        (np.uint16, np.iinfo(np.uint16).max),
+                        (np.uint32, np.iinfo(np.uint32).max),
+                        (np.uint64, np.iinfo(np.uint64).max)]
+    
+        # Select the smallest data type that can handle max_tokens
+        for dtype, max_limit in dtype_limits:
+            if vocab_size <= max_limit:
+                return dtype.__name__
+
+        # If no suitable type found, raise an exception (unlikely with uint64)
+        raise ValueError("Value is too large for available data types.")
+            
 
 if __name__ == "__main__":
     n_procs = max(1, int(os.cpu_count()-2)) #leave atleast 2 cores for other processes
@@ -288,4 +312,7 @@ if __name__ == "__main__":
     encoder = TiktokenTokenizer()    
 
     ds = unlabeledDataset(OpenWebTextConfig(), n_procs)
-    ds.tokenize(encoder.tokenize_dataset, save_tokens_to_disk = True) 
+    
+    ds.tokenize(encoder.tokenize_dataset, 
+                save_tokens_to_disk = True, 
+                dtype = encoder._get_numpy_dtype()) 

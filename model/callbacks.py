@@ -31,12 +31,19 @@ class save_model_checkpoints(Callback):
     
 
     """
-    def __init__(self, dir=None, model_name=None, checkpoint_name='checkpoint', every_iters=10000):
+    def __init__(self, dir=None, 
+                 model_name=None, 
+                 checkpoint_name='checkpoint', 
+                 every_iters=10000,):
+        
         self.path = Path(dir)
         self.model_name = Path(model_name)
         self.checkpoint_name = checkpoint_name
         self.every_iters = every_iters
         self.best_valid_loss = float('inf')
+        
+        
+    
         
     def after_step(self):
         """

@@ -7,43 +7,37 @@ from fastai.text.all import *
 
 
 class OWTData():
-    def __init__(self, path, block_size=1024):
+    def __init__(self, path, block_size=1024, dtype = None):
         """
         Dataset class for OpenWebText.
 
         Parameters:
         path (str): The path to the data file.
         block_size (int, optional): The block size for reading the data file. Defaults to 128.
+        dtype: np datatype: VERY IMPORTANT: the format with which to read data. Make sure that this is the same format with which data was saved. 
         
-        TODO: is del necessary? 
         """
+        
+        dtype = dtype or np.uint64
         self.path = path
         
+        self.data = np.memmap(self.path, dtype=dtype, mode='r')
         self.block_size = block_size
-        self.l = None
-        # assert self.block_size<=len(self.data), "block_size can't be larger than the data size"
         
     def __len__(self): 
-        if self.l is None:
-            data = np.memmap(self.path, dtype=np.uint16, mode='r')
-            self.l = len(data)
-            del data
-        return self.l - self.block_size
-    
+        
+        data_len = len(self.data)
+        assert self.block_size < data_len, "block_size can't be larger than the data size"
+        return data_len - self.block_size - 1
+
+
     def __getitem__(self, idx):
+        f'I think fastai expects input to be int64 format. to do .type, you first need to convert to np int64 (because it doesnt support uint64 conversion directly)'
         
-        data = np.memmap(self.path, dtype=np.uint16, mode='r')
-
-        x,y = np.array(data[idx:idx+self.block_size]).astype(np.int64), np.array(data[idx+1: idx+self.block_size+1]).astype(np.int64) 
-        
-        del data
-        return torch.from_numpy(x).type(torch.long), torch.from_numpy(y).type(torch.long)
+        x,y = np.array(self.data[idx:idx+self.block_size]), np.array(self.data[idx+1: idx+self.block_size+1]) 
+        return torch.from_numpy(x.astype(np.int64)).type(torch.long), torch.from_numpy(y.astype(np.int64)).type(torch.long)
     
     
-    
-
-
-
 
 class RandomSubsetSampler():
     """
