@@ -4,24 +4,6 @@ import numpy as np
 import os
 from pathlib import Path
 
-class WikipediaSimple():
-    dataset_name = 'wikipedia'
-    default_cache_dir = Path('~/.cache/tinyUniverse/pretraining_data/wikipedia_simple').expanduser()
-    split_into_train_val = True
-    split_name = 'val' #Optional
-    kwargs = {'name':'20220301.simple'}
-    
-
-class OpenWebTextConfig():
-    dataset_name = 'openwebtext'
-    default_cache_dir = Path('~/.cache/tinyUniverse/pretraining_data/openwebtext').expanduser()
-    split_into_train_val = True
-    split_name = 'val' #Optional
-    
-    
-    
-    
-    
 class unlabeledDataset():
     '''
     given huggingface dataset name, download the dataset using the datasets library
@@ -35,7 +17,7 @@ class unlabeledDataset():
     1. Add support for batch processing in datasets.map (batched = True) (see source code https://github.com/huggingface/datasets/blob/2.18.0/src/datasets/arrow_dataset.py#L2867)
     '''
     
-    def __init__(self, datasetConfig: OpenWebTextConfig, n_proc=8, cache_dir=None, force_redownload = False):
+    def __init__(self, datasetConfig , n_proc=8, cache_dir=None, force_redownload = False):
         """
         Initialize the UnlabeledDataLoader object.
 
@@ -151,7 +133,7 @@ class unlabeledDataset():
         
         for split, dset in tokens.items():
             
-            arr_len = np.sum(dset['len'], dtype=dtype)
+            arr_len = np.sum(dset['len'], dtype=np.uint64)
             filename = save_pth/f'{split}.bin'
             
             arr = np.memmap(filename, dtype=dtype, mode='w+', shape=(arr_len,))
@@ -198,11 +180,6 @@ class unlabeledDataset():
             raise FileNotFoundError(f"Tokenized dataset not found at {filename}")
         
         return np.memmap(filename, dtype=np.uint64, mode='r', shape=(len(self.dataset[split]),))
-
-
-
-
-
 
 
 
@@ -283,9 +260,6 @@ class TiktokenTokenizer():
         """
         
         return self.encoder.decode_batch(tokens) if batch else self.encoder.decode(tokens)
-        # if batch: return self.encoder.decode_batch(tokens) if ignore_special_tokens else self.encoder.decode_batch(tokens) 
-        # else: return self.encoder.decode_ordinary(tokens) if ignore_special_tokens else self.encoder.decode(tokens)
-        
     
     def _get_numpy_dtype(self):
         f'given the vocab size get the correct numpy dtype. Eg. You dont need uint64 for a vocab size of 50K, but only uint16.'
@@ -305,14 +279,4 @@ class TiktokenTokenizer():
         # If no suitable type found, raise an exception (unlikely with uint64)
         raise ValueError("Value is too large for available data types.")
             
-
-if __name__ == "__main__":
-    n_procs = max(1, int(os.cpu_count()-2)) #leave atleast 2 cores for other processes
-
-    encoder = TiktokenTokenizer()    
-
-    ds = unlabeledDataset(OpenWebTextConfig(), n_procs)
     
-    ds.tokenize(encoder.tokenize_dataset, 
-                save_tokens_to_disk = True, 
-                dtype = encoder._get_numpy_dtype()) 
