@@ -11,6 +11,12 @@ from fastai.distributed import *
 
 from torch.utils.data import DataLoader
 
+os.environ['NCCL_P2P_DISABLE']='1' #without this, NCCL (via accelerate.prepare) gets stuck during synchronization. 
+#You see an error like
+# RuntimeError: Exception occured in `DistributedTrainer` when calling event `before_fit`:  DDP expects same model across all ranks, but Rank 1 has 221 params, while rank 0 has inconsistent 0 params.
+#This seems like a NVIDIA problem due to the "asynchronous nature of CUDA kernels". Well then how can i make them synchronous? Asynchronous anyways does not look like a sound choice for parallel CUDA operations. 
+
+
 
 # bs = 20 #distributed training
 bs=20
