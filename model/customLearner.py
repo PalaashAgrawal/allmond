@@ -64,8 +64,7 @@ class customLearner(Learner):
     """
     
     
-    def fit(self, n_epoch, lr=None, wd=None, cbs=None, reset_opt=False, start_epoch=0, start_iter = 0):
-        
+    def fit(self, n_epoch, lr=None, wd=None, cbs=None, reset_opt=False, start_epoch=0, start_iter = 0):        
         
         if hasattr(self, 'resumeIter'): #resumeIter only exists if a checkpoint has been loaded with iteration info
             start_epoch = start_epoch or self.resumeIter['epoch']
@@ -74,29 +73,38 @@ class customLearner(Learner):
         if start_epoch != 0 or start_iter != 0:
             cbs = L(cbs) + SkipToIter(start_epoch, start_iter)
         
+        
         with self.added_cbs(cbs):
             if reset_opt or not self.opt: self.create_opt()
             if wd is None: wd = self.wd
             if wd is not None: self.opt.set_hypers(wd=wd)
             self.opt.set_hypers(lr=self.lr if lr is None else lr)
             self.n_epoch = n_epoch
-            self._with_events(self._do_fit, 'fit', CancelFitException, self._end_cleanup)
             
-    def _with_events(self, f, event_type, ex, final=noop):
-        try: 
-            print(f'before_{event_type}')
-            self(f'before_{event_type}'); 
-            print('done with before_{event_type}') 
-            f()
-        except ex: self(f'after_cancel_{event_type}')
-        self(f'after_{event_type}');  final()
+            
+            self._with_events(self._do_fit, 'fit', CancelFitException, self._end_cleanup)
+        
+    # def _call_one(self, event_name):
+    #     if not hasattr(event, event_name): raise Exception(f'missing {event_name}')
+    #     for cb in self.cbs.sorted('order'): 
+    #         print(cb) #PAg
+    #         cb(event_name)
+            
+    # def _with_events(self, f, event_type, ex, final=noop):
+    #     try: 
+    #         print(f'before_{event_type}')
+    #         self(f'before_{event_type}'); 
+    #         print('done with before_{event_type}') 
+    #         f()
+    #     except ex: self(f'after_cancel_{event_type}')
+    #     self(f'after_{event_type}');  final()
     
-    def _do_fit(self):
-        print('starting a new epoch')
-        for epoch in range(self.n_epoch):
-            print(epoch)
-            self.epoch=epoch
-            self._with_events(self._do_epoch, 'epoch', CancelEpochException)
+    # def _do_fit(self):
+    #     print('starting a new epoch')
+    #     for epoch in range(self.n_epoch):
+    #         print(epoch)
+    #         self.epoch=epoch
+    #         self._with_events(self._do_epoch, 'epoch', CancelEpochException)
     
 
 @patch
