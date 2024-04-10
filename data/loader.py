@@ -132,13 +132,4 @@ class RandomSubsetSampler():
         """
         idxs = torch.randint(len(self.dataset), size=(self.subset_size,))
         return iter(idxs)
-
-    
-    
-# from config import OpenWebTextConfig
-
-# data = OWTData(OpenWebTextConfig().default_cache_dir/'train.bin' , block_size=512, dtype=np.uint16)
-# x,y = data[1]
-# print(x.shape, y.shape)
-
     
