@@ -57,11 +57,11 @@ class OWTData:
         self.file = open(self.file_path, 'rb')
         self.mm = mmap.mmap(self.file.fileno(), 0, access=mmap.ACCESS_READ)
         self.mm.madvise(mmap.MADV_RANDOM)
+        self.length = (os.path.getsize(self.file_path)//self.dtype.itemsize) - self.block_size - 1
         
     
     def __len__(self):
-        return (os.path.getsize(self.file_path)//self.dtype.itemsize) - self.block_size - 1
-        
+        return self.length
     
     def __getitem__(self, index):
         # Calculate the byte offset for the requested index
@@ -72,9 +72,11 @@ class OWTData:
         self.mm.seek(offset)
         buffer = self.mm.read(num_bytes)
         array = np.frombuffer(buffer, dtype=self.dtype)
+        x = array[:-1]
+        y = array[1:]
         
-        x_tensor = torch.from_numpy(array[:-1].astype(np.int64)).type(torch.long)
-        y_tensor = torch.from_numpy(array[1:].astype(np.int64)).type(torch.long)
+        x_tensor = torch.from_numpy(x.astype(np.int64)).type(torch.long)
+        y_tensor = torch.from_numpy(y.astype(np.int64)).type(torch.long)
         return x_tensor, y_tensor
 
 

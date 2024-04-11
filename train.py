@@ -9,7 +9,7 @@ from model.customLearner import customLearner
 from fastai.text.all import *
 from fastai.distributed import *
 
-# from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader
 
 
 os.environ['NCCL_P2P_DISABLE']='1' #without this, NCCL (via accelerate.prepare) gets stuck during synchronization. 
@@ -56,5 +56,4 @@ learn = customLearner(dls,
 
 with learn.distrib_ctx():
     learn.fit_one_cycle(2, 1e-4)
-    learn.validate()
     
