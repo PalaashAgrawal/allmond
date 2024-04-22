@@ -28,30 +28,16 @@ os.environ['NCCL_P2P_DISABLE']='1' #without this, NCCL (via accelerate.prepare) 
 bs=20 #each GPU gets bs = 20
 block_size = 512
 valid_sampler_size = 1000 #how many samples to use for validation. This is only used to check if validation loss is better than best_valid_loss, so that a checkpoint can be saved. Karpathy uses 200 random points
-validate_every = 5000
+validate_every = 1000 #1000 iterations, each iteration is bs*total_GPUs inputs
 
 model = GPT(block_size=block_size)
 
 tokenizer = TiktokenTokenizer(from_model = "gpt2")
 
-# train_ds = OWTData(OpenWebTextConfig().default_cache_dir/'train.bin'    ,block_size=block_size, dtype=tokenizer._get_numpy_dtype())
-# valid_ds = OWTData(OpenWebTextConfig().default_cache_dir/'val.bin'      ,block_size=block_size, dtype=tokenizer._get_numpy_dtype())
-
-
-# train_dl = DataLoader(train_ds, batch_size=bs, pin_memory=True, shuffle = True)
-# valid_dl = DataLoader(valid_ds, batch_size=2*bs,
-#                       pin_memory = True,
-#                       sampler = RandomSubsetSampler(valid_ds, subset_size=valid_sampler_size),)
-
-
-device = 'cuda'
-device_type = 'cuda' if 'cuda' in device else 'cpu' # for later use in torch.autocast
-
-
 train_dl = customDistributedDL(dataloader(OpenWebTextConfig().default_cache_dir/'train.bin', bs = bs, block_size=block_size, 
                       dtype=tokenizer._get_numpy_dtype()))
 valid_dl = customDistributedDL(dataloader(OpenWebTextConfig().default_cache_dir/'val.bin', bs = bs, block_size=block_size, 
-                      dtype=tokenizer._get_numpy_dtype()))
+                      dtype=tokenizer._get_numpy_dtype()),sample_size = valid_sampler_size//bs)
 
 
 dls = DataLoaders(train_dl, valid_dl)

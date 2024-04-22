@@ -3,6 +3,8 @@ PAg: Implementation of GPT using fastai. Logic -- from nanogpt by Karpathy: http
 TODO:
 
 - Implement GPT as is on Wikipedia data
-- Extend API to multiple datasets, if user wants
-- Implement Heirarchical text data
+- Wandb callback integration
+- Import a pretrained model
+
+
 
