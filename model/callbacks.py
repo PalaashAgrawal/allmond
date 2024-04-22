@@ -1,7 +1,8 @@
 from fastai.text.all import *
+from fastai.distributed import *
 
 
-class save_model_checkpoints(Callback):
+class save_and_load_model_checkpoints(Callback):
     """
     Callback to save model checkpoints during training.
 
@@ -24,8 +25,8 @@ class save_model_checkpoints(Callback):
         
     
     TODO: 
-    remove hardcoding of cuda., and include device parameter
-    Implement DDP device handling. 
+    (DONE) remove hardcoding of cuda., and include device parameter 
+    (I think this is taken care of). Implement DDP device handling. 
     
 
     """
@@ -40,34 +41,62 @@ class save_model_checkpoints(Callback):
         self.every_iters = every_iters
         self.best_valid_loss = float('inf')
         
+    
+    def before_fit(self):
+        
+        if self.path: self.learn.path = self.path
+        if self.model_name: self.learn.model_dir = self.model_name
+        
+        
+        checkpoint = self.path/self.model_name/f'{self.checkpoint_name}.pth'
+        if checkpoint.exists():
+            print(f'Resuming training using checkpoint {checkpoint}')
+            self.learn.load(self.checkpoint_name)
         
     
-        
     def after_step(self):
         """
         Method called after each training step to save model checkpoints.
 
         """
-        if self.path: self.learn.path = self.path
-        if self.model_name: self.learn.model_dir = self.model_name
         
-        if self.learn.training and self.learn.iter and self.learn.iter % self.every_iters == 0:
-            accumulated_loss = 0.0
-            count = 0
-        
-            for xb, yb in self.learn.dls.valid:
-                with torch.no_grad():
-                    pred = self.learn.model(xb.cuda())
-                    loss_grad = self.learn.loss_func(pred, yb.cuda())
-                    loss = loss_grad.clone()
-                    accumulated_loss += loss
-                    count += yb.shape[0]
+        if self.learn.training and self.learn.iter>0 and self.learn.iter % self.every_iters == 0:
+            pct = (self.learn.iter/self.learn.n_iter)%1.
+            print('percent iter', pct)
+            # accumulated_loss = 0.0
+            # count = 0
             
-            loss = accumulated_loss / count
-
-            if loss < self.best_valid_loss:
-                self.best_valid_loss = loss
+            # print('len', len(self.learn.dls.valid))
+        
+            # for b in self.learn.dls.valid:
+            #     xb,yb = self.learn._set_device(b)
+            #     print('shape', xb.shape, yb.shape)
+            #     with torch.no_grad():
+            #         pred = self.learn.model(xb)
+            #         loss_grad = self.learn.loss_func(pred, yb)
+            #         loss = loss_grad.clone()
+            #         accumulated_loss += loss
+            #         count += yb.shape[0]
+            
+            # loss = accumulated_loss / count
+            
+            res = self.learn.validate(cbs = Recorder())
+            
+            if res[0] < self.best_valid_loss:
+                self.best_valid_loss = res[0]
                 self.learn.save(f'{self.checkpoint_name}', with_opt=True, with_iter = True)
                 
+        
+            #need to set the model back to training setting
+            self.learn.pct_train=(self.learn.epoch + pct/self.learn.n_epoch)/self.learn.n_epoch
+            self.model.train()
+            self.learn.training=True
+        
                 
+
+def rank0_decorator(func):
+    def wrapper(self):
+        return func(self)
+    return wrapper
+         
 

@@ -6,57 +6,60 @@ import mmap
 from fastai.distributed import *
 
 
-class OWTData:
-    """
-    np.memmap leads to memory leaks. This python mmap implementation is better. 
-    TODO:
-    1. valid dataloader raises
-    in __getitem__
-        array = np.frombuffer(buffer, dtype=self.dtype, count=self.shape[1])
-        ValueError: buffer is smaller than requested size 
+# class OWTData:
+#     """
+#     np.memmap leads to memory leaks. This python mmap implementation is better. 
+#     TODO:
+#     1. valid dataloader raises
+#     in __getitem__
+#         array = np.frombuffer(buffer, dtype=self.dtype, count=self.shape[1])
+#         ValueError: buffer is smaller than requested size 
         
-            """
-    def __init__(self, path, block_size=512, dtype=None):
-        self.file_path = path
-        self.dtype = np.dtype(dtype)
-        self.block_size = block_size
+#             """
+#     def __init__(self, path, block_size=512, dtype=None):
+#         self.file_path = path
+#         self.dtype = np.dtype(dtype)
+#         self.block_size = block_size
 
-        # Open the file and create the mmap object
-        self.file = open(self.file_path, 'rb')
-        self.mm = mmap.mmap(self.file.fileno(), 0, access=mmap.ACCESS_READ)
-        self.mm.madvise(mmap.MADV_RANDOM)
-        self.length = (os.path.getsize(self.file_path)//self.dtype.itemsize) - self.block_size - 1
+#         # Open the file and create the mmap object
+#         self.file = open(self.file_path, 'rb')
+#         self.mm = mmap.mmap(self.file.fileno(), 0, access=mmap.ACCESS_READ)
+#         self.mm.madvise(mmap.MADV_RANDOM)
+#         self.length = (os.path.getsize(self.file_path)//self.dtype.itemsize) - self.block_size - 1
         
     
-    def __len__(self):
-        f'ONLY IN distributed training: Works okay till 400 million, on a 125GB RAM card. After, that memory explodes, and kills processes'
-        f'Actual length of dataset is slightly greater than 9billion. '
-        return 400_000_000
-        # return self.length
+#     def __len__(self):
+#         f'ONLY IN distributed training: Works okay till 400 million, on a 125GB RAM card. After, that memory explodes, and kills processes'
+#         f'Actual length of dataset is slightly greater than 9billion. '
+#         return 400_000_000
+#         # return self.length
     
-    def __getitem__(self, index):
+#     def __getitem__(self, index):
         
-        # Calculate the byte offset for the requested index
-        offset = (index) * self.dtype.itemsize
-        # Calculate the number of bytes to read (block_size elements)
-        num_bytes = (self.block_size + 1) * self.dtype.itemsize # +1 because we are extracting both x and y from the same block
-        # Read the bytes and create a NumPy array from them
-        self.mm.seek(offset)
-        buffer = self.mm.read(num_bytes)
-        array = np.frombuffer(buffer, dtype=self.dtype)
-        x = array[:-1]
-        y = array[1:]
+#         # Calculate the byte offset for the requested index
+#         offset = (index) * self.dtype.itemsize
+#         # Calculate the number of bytes to read (block_size elements)
+#         num_bytes = (self.block_size + 1) * self.dtype.itemsize # +1 because we are extracting both x and y from the same block
+#         # Read the bytes and create a NumPy array from them
+#         self.mm.seek(offset)
+#         buffer = self.mm.read(num_bytes)
+#         array = np.frombuffer(buffer, dtype=self.dtype)
+#         x = array[:-1]
+#         y = array[1:]
         
-        x_tensor = torch.from_numpy(x.astype(np.int64)).type(torch.long)
-        y_tensor = torch.from_numpy(y.astype(np.int64)).type(torch.long)
-        return x_tensor, y_tensor
+#         x_tensor = torch.from_numpy(x.astype(np.int64)).type(torch.long)
+#         y_tensor = torch.from_numpy(y.astype(np.int64)).type(torch.long)
+#         return x_tensor, y_tensor
 
 
 class dataloader(DataLoader):
 
-    def __init__(self, file, block_size, bs, dtype, device:str='cuda', seed:int = 42):
-        # self.generator = self.batch_generator()
-        # super().__init__(OWTData(file, block_size, dtype), bs = bs, device = device)
+    def __init__(self, file, block_size, bs, dtype, device:str='cuda', seed:int = 42, sample_size = None):
+        """
+        sample_size is specifically used for valid_dl, where you only want to test the dataset on a subset of the valid dl, solely to heck progress of the model.
+        We dont want to iterate through the entire valid_dl, since that takes time. 
+        just a couple samples is enough to check and checkpoint the training model at certain stages. 
+        """
         
         self.file = file
         self.dataset = np.memmap(file, dtype = dtype, mode = 'r')
@@ -64,7 +67,7 @@ class dataloader(DataLoader):
         self.bs = bs
         self.dtype = dtype
         
-        self.n = len(self.dataset)
+        self.n = sample_size or len(self.dataset)
         
         self.device = device
         
@@ -86,16 +89,17 @@ class dataloader(DataLoader):
         
 
     
-    def __iter__(self, n = None):
+    def __iter__(self, n= None):
         'PAg: custom n: how many iterations do you want. By default, it is self.n//self.bs'
         return self.batch_generator(n)
     
     
-    def batch_generator(self, n = None):
+    def batch_generator(self, n= None):
+        
         self.before_iter()
     
         # while True:  # This loop will make it a generator that yields indefinitely
-        for _ in range(n or len(self)):
+        for _ in range(len(self)):
             # We recreate np.memmap every batch to avoid a memory leak
             data = np.memmap(self.file, dtype=self.dtype, mode='r')
             ix = torch.randint(len(data) - self.block_size - 1, (self.bs,))
@@ -119,26 +123,28 @@ class dataloader(DataLoader):
         self.after_iter()
         if hasattr(self, 'it'): del(self.it)
         
+    def __getattr__(self, k):
+        attr = getattr(self.__dict__, k, None)
+        if attr is not None: return attr
+        
+        raise AttributeError(k)
         
 
 
 
 def _round_to_multiple(number,multiple): return int(math.ceil(number/multiple)*multiple)
+
 class customDistributedDL(DistributedDL):
+    _default='dl'
+    
     def __init__(self,dl,rank=None,world_size=None,device=None, sample_size = None):
-        """
-        sample_size is specifically used for valid_dl, where you only want to test the dataset on a subset of the valid dl, solely to heck progress of the model.
-        We dont want to iterate through the entire valid_dl, since that takes time. 
-        just a couple samples is enough to check and checkpoint the training model at certain stages. 
-        """
         super().__init__(dl, rank=rank, world_size=world_size, device = device)
         self.sample_size = sample_size
     
     def __iter__(self):
-        if self.sample_size is not None: 
-            n = min(len(self),_round_to_multiple(self.sample_size,self.world_size)//self.world_size)
-        else: n = len(self)
-        return self.dl.__iter__(n = n)
+        self.dl.n = _round_to_multiple(self.dl.n, self.world_size)// self.world_size
+        return iter(self.dl)
+
 
 
 # class RandomSubsetSampler():
@@ -181,13 +187,13 @@ class customDistributedDL(DistributedDL):
 #         return iter(idxs)
     
 
-if __name__ =='__main__':
+# if __name__ =='__main__':
     
     #Just for testing
 
-    from config import OpenWebTextConfig
-    data = OWTData(OpenWebTextConfig().default_cache_dir/'train.bin', block_size=512, dtype=np.uint16)
-    print(data.length)
-    x,y = data[len(data)-1]
-    print(x.shape, y.shape)
+    # from config import OpenWebTextConfig
+    # data = OWTData(OpenWebTextConfig().default_cache_dir/'train.bin', block_size=512, dtype=np.uint16)
+    # print(data.length)
+    # x,y = data[len(data)-1]
+    # print(x.shape, y.shape)
     

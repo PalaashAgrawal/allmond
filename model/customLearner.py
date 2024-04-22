@@ -64,11 +64,13 @@ class customLearner(Learner):
     """
     
     
-    def fit(self, n_epoch, lr=None, wd=None, cbs=None, reset_opt=False, start_epoch=0, start_iter = 0):        
+    def fit(self, n_epoch, lr=None, wd=None, cbs=None, reset_opt=False, start_epoch=0, start_iter = 0):    
+        
         
         if hasattr(self, 'resumeIter'): #resumeIter only exists if a checkpoint has been loaded with iteration info
             start_epoch = start_epoch or self.resumeIter['epoch']
             start_iter = start_iter or self.resumeIter['iter']
+            print(f'Resuming Training from iter {start_iter} of epoch {start_epoch} ')
             
         if start_epoch != 0 or start_iter != 0:
             cbs = L(cbs) + SkipToIter(start_epoch, start_iter)
@@ -131,7 +133,7 @@ def load(self:Learner, file, device=None, **kwargs):
     distrib_barrier()
     
     iteration = load_model(file, self.model, self.opt, device=device, **kwargs)
-    if iteration: self.resumeIter = iteration
+    if iteration is not None: self.resumeIter = iteration
     
     
     return self
