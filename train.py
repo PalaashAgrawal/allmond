@@ -1,6 +1,6 @@
 from data.unlabeled import TiktokenTokenizer
 from data.config import OpenWebTextConfig
-from data.loader import OWTData, RandomSubsetSampler
+from data.loader import OWTData, RandomSubsetSampler, dataloader, customDistributedDL
 
 from model.gpt2 import GPT
 from model.callbacks import save_model_checkpoints
@@ -9,8 +9,15 @@ from model.customLearner import customLearner
 from fastai.text.all import *
 from fastai.distributed import *
 
-from torch.utils.data import DataLoader
+# from torch.utils.data import DataLoader
 
+
+
+
+import torch
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.distributed import init_process_group, destroy_process_group
+from contextlib import nullcontext
 
 os.environ['NCCL_P2P_DISABLE']='1' #without this, NCCL (via accelerate.prepare) gets stuck during synchronization. 
 #You see an error like
@@ -27,13 +34,24 @@ model = GPT(block_size=block_size)
 
 tokenizer = TiktokenTokenizer(from_model = "gpt2")
 
-train_ds = OWTData(OpenWebTextConfig().default_cache_dir/'train.bin'    ,block_size=block_size, dtype=tokenizer._get_numpy_dtype())
-valid_ds = OWTData(OpenWebTextConfig().default_cache_dir/'val.bin'      ,block_size=block_size, dtype=tokenizer._get_numpy_dtype())
+# train_ds = OWTData(OpenWebTextConfig().default_cache_dir/'train.bin'    ,block_size=block_size, dtype=tokenizer._get_numpy_dtype())
+# valid_ds = OWTData(OpenWebTextConfig().default_cache_dir/'val.bin'      ,block_size=block_size, dtype=tokenizer._get_numpy_dtype())
 
-train_dl = DataLoader(train_ds, batch_size=bs, pin_memory=True, shuffle = True)
-valid_dl = DataLoader(valid_ds, batch_size=2*bs,
-                      pin_memory = True,
-                      sampler = RandomSubsetSampler(valid_ds, subset_size=valid_sampler_size),)
+
+# train_dl = DataLoader(train_ds, batch_size=bs, pin_memory=True, shuffle = True)
+# valid_dl = DataLoader(valid_ds, batch_size=2*bs,
+#                       pin_memory = True,
+#                       sampler = RandomSubsetSampler(valid_ds, subset_size=valid_sampler_size),)
+
+
+device = 'cuda'
+device_type = 'cuda' if 'cuda' in device else 'cpu' # for later use in torch.autocast
+
+
+train_dl = customDistributedDL(dataloader(OpenWebTextConfig().default_cache_dir/'train.bin', bs = bs, block_size=block_size, 
+                      dtype=tokenizer._get_numpy_dtype()))
+valid_dl = customDistributedDL(dataloader(OpenWebTextConfig().default_cache_dir/'val.bin', bs = bs, block_size=block_size, 
+                      dtype=tokenizer._get_numpy_dtype()))
 
 
 dls = DataLoaders(train_dl, valid_dl)
@@ -55,5 +73,4 @@ learn = customLearner(dls,
 
 
 with learn.distrib_ctx():
-    learn.fit_one_cycle(2, 1e-4)
-    
+    learn.fit_one_cycle(1, 1e-4)
