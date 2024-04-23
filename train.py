@@ -60,8 +60,13 @@ learn = customLearner(dls,
                 loss_func=CrossEntropyLossFlat(), 
                 metrics=[accuracy, Perplexity()],
                 cbs = [check_and_save_model],
+                path = check_and_save_model.path,
+                model_dir=check_and_save_model.model_dir
                 ).to_bf16()
 
+
+#check and load previous checkpoint. Doesnt make sense to do it within the callback, because all callbacks are initialized in the Learner before they are even called
+learn.check_and_load_learner(check_and_save_model.checkpoint_name)
 
 with learn.distrib_ctx():
     learn.fit_one_cycle(1, 1e-4)

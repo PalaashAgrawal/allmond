@@ -3,6 +3,7 @@ from fastai.distributed import *
 
 
 class save_and_load_model_checkpoints(Callback):
+
     """
     Callback to save model checkpoints during training.
 
@@ -29,29 +30,31 @@ class save_and_load_model_checkpoints(Callback):
     (I think this is taken care of). Implement DDP device handling. 
     
 
+
     """
+    
     def __init__(self, dir=None, 
                  model_name=None, 
                  checkpoint_name='checkpoint', 
                  every_iters=10000,):
         
         self.path = Path(dir)
-        self.model_name = Path(model_name)
+        self.model_dir = Path(model_name)
         self.checkpoint_name = checkpoint_name
         self.every_iters = every_iters
         self.best_valid_loss = float('inf')
         
     
-    def before_fit(self):
+    # def before_fit(self):
         
-        if self.path: self.learn.path = self.path
-        if self.model_name: self.learn.model_dir = self.model_name
+    #     if self.path: self.learn.path = self.path
+    #     if self.model_dir: self.learn.model_dir = self.model_dir
         
         
-        checkpoint = self.path/self.model_name/f'{self.checkpoint_name}.pth'
-        if checkpoint.exists():
-            print(f'Resuming training using checkpoint {checkpoint}')
-            self.learn.load(self.checkpoint_name)
+    #     checkpoint = self.path/self.model_dir/f'{self.checkpoint_name}.pth'
+    #     if checkpoint.exists():
+    #         print(f'Resuming training using checkpoint {checkpoint}')
+    #         self.learn.load(self.checkpoint_name)
         
     
     def after_step(self):
@@ -60,9 +63,12 @@ class save_and_load_model_checkpoints(Callback):
 
         """
         
+        if self.path: self.learn.path = self.path
+        if self.model_dir: self.learn.model_dir = self.model_dir
+    
+    
         if self.learn.training and self.learn.iter>0 and self.learn.iter % self.every_iters == 0:
             pct = (self.learn.iter/self.learn.n_iter)%1.
-            print('percent iter', pct)
             # accumulated_loss = 0.0
             # count = 0
             
@@ -80,7 +86,7 @@ class save_and_load_model_checkpoints(Callback):
             
             # loss = accumulated_loss / count
             
-            res = self.learn.validate(cbs = Recorder())
+            res = self.learn.validate()
             
             if res[0] < self.best_valid_loss:
                 self.best_valid_loss = res[0]
@@ -88,9 +94,12 @@ class save_and_load_model_checkpoints(Callback):
                 
         
             #need to set the model back to training setting
+            # self.learn.pct_train=(self.learn.epoch + pct/self.learn.n_epoch)/self.learn.n_epoch
+            # self.model.train()
+            # self.learn.training=True
+            
+            self.learn(f'before_fit')
             self.learn.pct_train=(self.learn.epoch + pct/self.learn.n_epoch)/self.learn.n_epoch
-            self.model.train()
-            self.learn.training=True
         
                 
 

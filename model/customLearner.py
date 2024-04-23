@@ -64,13 +64,11 @@ class customLearner(Learner):
     """
     
     
-    def fit(self, n_epoch, lr=None, wd=None, cbs=None, reset_opt=False, start_epoch=0, start_iter = 0):    
+    def fit(self, n_epoch, lr=None, wd=None, cbs=None, reset_opt=False, start_epoch=0, start_iter = 0):
         
-        
-        if hasattr(self, 'resumeIter'): #resumeIter only exists if a checkpoint has been loaded with iteration info
-            start_epoch = start_epoch or self.resumeIter['epoch']
-            start_iter = start_iter or self.resumeIter['iter']
-            print(f'Resuming Training from iter {start_iter} of epoch {start_epoch} ')
+        if hasattr(self, 'resumeIter'):
+            start_epoch  = start_epoch or self.resumeIter['epoch']
+            start_iter = start_iter or self.resumeIter['iter']    
             
         if start_epoch != 0 or start_iter != 0:
             cbs = L(cbs) + SkipToIter(start_epoch, start_iter)
@@ -82,32 +80,23 @@ class customLearner(Learner):
             if wd is not None: self.opt.set_hypers(wd=wd)
             self.opt.set_hypers(lr=self.lr if lr is None else lr)
             self.n_epoch = n_epoch
-            
+                        
             
             self._with_events(self._do_fit, 'fit', CancelFitException, self._end_cleanup)
         
-    # def _call_one(self, event_name):
-    #     if not hasattr(event, event_name): raise Exception(f'missing {event_name}')
-    #     for cb in self.cbs.sorted('order'): 
-    #         print(cb) #PAg
-    #         cb(event_name)
-            
-    # def _with_events(self, f, event_type, ex, final=noop):
-    #     try: 
-    #         print(f'before_{event_type}')
-    #         self(f'before_{event_type}'); 
-    #         print('done with before_{event_type}') 
-    #         f()
-    #     except ex: self(f'after_cancel_{event_type}')
-    #     self(f'after_{event_type}');  final()
+    def _do_fit(self):
+        for epoch in range(self.n_epoch):
+            self.epoch=epoch
+            self._with_events(self._do_epoch, 'epoch', CancelEpochException)
     
-    # def _do_fit(self):
-    #     print('starting a new epoch')
-    #     for epoch in range(self.n_epoch):
-    #         print(epoch)
-    #         self.epoch=epoch
-    #         self._with_events(self._do_epoch, 'epoch', CancelEpochException)
     
+    #PAg: not for PR
+    def check_and_load_learner(self, file, device = 'cuda'):
+        f'check if a checkpoint exists'
+        checkpoint = self.path/self.model_dir/f'{file}.pth'
+        if checkpoint.exists():
+            print(f'Resuming training using checkpoint {str(checkpoint)}')
+            self.load(file, device = device)
 
 @patch
 @delegates(save_model)
@@ -141,12 +130,13 @@ def load(self:Learner, file, device=None, **kwargs):
     
 class SkipToIter(Callback):
     "Skip training up to   `iter`th iteration in `epoch`th epoch"
+    "if epoch and iter passed during initialization are not 0, they override values derived from loaded hyperparameters in learn.load"
     order = 70
     
     def __init__(self, epoch:int, iter: int = 0):
         self._skip_to_epoch = epoch
         self._skip_to_iter = iter
-
+        
     def before_epoch(self):
         if self.epoch < self._skip_to_epoch:
             raise CancelEpochException
