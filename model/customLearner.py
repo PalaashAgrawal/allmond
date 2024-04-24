@@ -96,7 +96,7 @@ class customLearner(Learner):
         f'check if a checkpoint exists'
         checkpoint = self.path/self.model_dir/f'{file}.pth'
         if checkpoint.exists():
-            print(f'Resuming training using checkpoint {str(checkpoint)}')
+            print(f"Resuming training from iteration {getattr(getattr(self, 'resumeIter', None), 'iter', 0)} of epoch {getattr(getattr(self, 'resumeIter', None), 'epoch', 0)}  using checkpoint {str(checkpoint)}")
             self.load(file, device = device)
 
 @patch

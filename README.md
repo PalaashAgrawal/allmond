@@ -2,9 +2,9 @@ PAg: Implementation of GPT using fastai. Logic -- from nanogpt by Karpathy: http
 
 TODO:
 
-- Implement GPT as is on Wikipedia data
-- Wandb callback integration
-- Import a pretrained model
+- ~~Implement GPT as is on Wikipedia data~~
+- ~~Wandb callback integration~~
+- Import a pretrained model of ~1B, and match model design specs
 
 
 

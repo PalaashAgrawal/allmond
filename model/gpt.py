@@ -262,8 +262,27 @@ class GPT(nn.Module):
         return model
     
     
-    def __str__(self): return 'gpt2'
+    def __str__(self): 
+        def _format_number(num):
+            if num >= 1_000_000_000:
+                return f"{num / 1_000_000_000:.1f}B"
+            elif num >= 1_000_000:
+                return f"{num / 1_000_000:.1f}M"
+            else:
+                return str(num)
+            
+        return f'gpt-{_format_number(self.num_params)}'
+    
+    @property
+    def num_params(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
         
+
+if __name__=='__main__':
+    model = GPT(block_size=512, n_layer = 109)
+    # print(model.num_params)
+    print(str(model))
+    
         
         
         
