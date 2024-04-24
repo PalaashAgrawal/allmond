@@ -63,49 +63,45 @@ class save_and_load_model_checkpoints(Callback):
 
         """
         
+        
         if self.path: self.learn.path = self.path
         if self.model_dir: self.learn.model_dir = self.model_dir
-    
-    
-        if self.learn.training and self.learn.iter>0 and self.learn.iter % self.every_iters == 0:
-            pct = (self.learn.iter/self.learn.n_iter)%1.
-            # accumulated_loss = 0.0
-            # count = 0
-            
-            # print('len', len(self.learn.dls.valid))
         
-            # for b in self.learn.dls.valid:
-            #     xb,yb = self.learn._set_device(b)
-            #     print('shape', xb.shape, yb.shape)
-            #     with torch.no_grad():
-            #         pred = self.learn.model(xb)
-            #         loss_grad = self.learn.loss_func(pred, yb)
-            #         loss = loss_grad.clone()
-            #         accumulated_loss += loss
-            #         count += yb.shape[0]
+    
+    
+        if (self.learn.training and 
+            self.learn.iter>0 and self.learn.iter % self.every_iters == 0): #only execute for rank==0
             
-            # loss = accumulated_loss / count
+            # pct = (self.learn.iter/self.learn.n_iter)%1.
+            accumulated_loss = 0.0
+            count = 0
+                    
+            for b in self.learn.dls.valid:
+                xb,yb = self.learn._set_device(b)
+                with torch.no_grad():
+                    pred = self.learn.model(xb)
+                    loss_grad = self.learn.loss_func(pred, yb)
+                    loss = loss_grad.clone()
+                    accumulated_loss += loss
+                    count += yb.shape[0]
             
-            res = self.learn.validate()
+            loss = accumulated_loss / count
             
-            if res[0] < self.best_valid_loss:
-                self.best_valid_loss = res[0]
-                self.learn.save(f'{self.checkpoint_name}', with_opt=True, with_iter = True)
-                
+            # res = self.learn.validate()
+            
+           
+            
+            if not rank_distrib() and loss< self.best_valid_loss: #only save for 
+                self.best_valid_loss = loss
+                self.learn.save(f'{self.checkpoint_name}', with_opt=True, with_iter = True)                
         
             #need to set the model back to training setting
             # self.learn.pct_train=(self.learn.epoch + pct/self.learn.n_epoch)/self.learn.n_epoch
             # self.model.train()
             # self.learn.training=True
             
-            self.learn(f'before_fit')
-            self.learn.pct_train=(self.learn.epoch + pct/self.learn.n_epoch)/self.learn.n_epoch
-        
+            # self.learn(f'before_fit')
+            # self.learn.pct_train=(self.learn.epoch + pct/self.learn.n_epoch)/self.learn.n_epoch
+                    
                 
-
-def rank0_decorator(func):
-    def wrapper(self):
-        return func(self)
-    return wrapper
-         
 

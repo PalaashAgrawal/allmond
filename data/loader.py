@@ -54,7 +54,7 @@ from fastai.distributed import *
 
 class dataloader(DataLoader):
 
-    def __init__(self, file, block_size, bs, dtype, device:str='cuda', seed:int = 42, sample_size = None):
+    def __init__(self, file, block_size, bs, dtype, device:str = 'cuda', seed:int = 42, sample_size = None):
         """
         sample_size is specifically used for valid_dl, where you only want to test the dataset on a subset of the valid dl, solely to heck progress of the model.
         We dont want to iterate through the entire valid_dl, since that takes time. 
@@ -70,7 +70,6 @@ class dataloader(DataLoader):
         self.n = sample_size or len(self.dataset)
         
         self.device = device
-        
         self._device_type = 'cuda' if 'cuda' in device else 'cpu'        
         
         # #other - required by distributed Trainer class initialization
@@ -95,6 +94,7 @@ class dataloader(DataLoader):
     
     
     def batch_generator(self, n= None):
+        f'only uniquely samples 63% of all the data'
         
         self.before_iter()
     
@@ -108,13 +108,15 @@ class dataloader(DataLoader):
             x = torch.stack([torch.from_numpy(data[i:i+self.block_size].astype(np.int64)) for i in ix])
             y = torch.stack([torch.from_numpy(data[i+1:i+1+self.block_size].astype(np.int64)) for i in ix])
             
+            
             if self._device_type == 'cuda':
+            # if 'cuda' in self.device:
                 # Pin arrays x and y for asynchronous GPU transfer
                 x, y = x.pin_memory().to(self.device, non_blocking=True), y.pin_memory().to(self.device, non_blocking=True)
             else:
                 x, y = x.to(self.device), y.to(self.device)
             b = (x,y)
-            if self.device is not None: b = to_device(b, self.device)
+            # if self.device is not None: b = to_device(b, self.device)
             yield self.after_batch(b)
         
         
@@ -137,12 +139,11 @@ def _round_to_multiple(number,multiple): return int(math.ceil(number/multiple)*m
 class customDistributedDL(DistributedDL):
     _default='dl'
     
-    def __init__(self,dl,rank=None,world_size=None,device=None, sample_size = None):
-        super().__init__(dl, rank=rank, world_size=world_size, device = device)
-        self.sample_size = sample_size
+    # def __init__(self,dl,rank=None,world_size=None,device=None):
+    #     super().__init__(dl, rank=rank, world_size=world_size, device = device)
+        # self.dl.n = _round_to_multiple(self.dl.n, self.world_size)// self.world_size
     
     def __iter__(self):
-        self.dl.n = _round_to_multiple(self.dl.n, self.world_size)// self.world_size
         return iter(self.dl)
 
 

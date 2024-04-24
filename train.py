@@ -9,14 +9,6 @@ from model.customLearner import customLearner
 from fastai.text.all import *
 from fastai.distributed import *
 
-# from torch.utils.data import DataLoader
-
-
-
-# import torch
-# from torch.nn.parallel import DistributedDataParallel as DDP
-# from torch.distributed import init_process_group, destroy_process_group
-# from contextlib import nullcontext
 
 os.environ['NCCL_P2P_DISABLE']='1' #without this, NCCL (via accelerate.prepare) gets stuck during synchronization. 
 #You see an error like
@@ -37,7 +29,7 @@ train_dl = dataloader(OpenWebTextConfig().default_cache_dir/'train.bin', bs = bs
                       dtype=tokenizer._get_numpy_dtype())
 valid_dl = dataloader(OpenWebTextConfig().default_cache_dir/'val.bin', bs = bs, block_size=block_size, 
                       dtype=tokenizer._get_numpy_dtype(), 
-                      sample_size = valid_sampler_size//bs)
+                      sample_size = valid_sampler_size)
 
 if num_distrib(): #distributed training
     train_dl, valid_dl = customDistributedDL(train_dl), customDistributedDL(valid_dl)
@@ -66,7 +58,9 @@ learn = customLearner(dls,
 
 
 #check and load previous checkpoint. Doesnt make sense to do it within the callback, because all callbacks are initialized in the Learner before they are even called
-learn.check_and_load_learner(check_and_save_model.checkpoint_name)
+# learn.check_and_load_learner(check_and_save_model.checkpoint_name, device = rank_distrib() if num_distrib() else None)
+
+# learn.check_and_load_learner(check_and_save_model.checkpoint_name)
 
 with learn.distrib_ctx():
     learn.fit_one_cycle(1, 1e-4)
