@@ -1,7 +1,7 @@
-from fastai.learner import *
 # from fastcore.all import *
 # from fastai.callback.all import *
 from fastai.vision.all import * #placeholder to resolve all errors
+from fastai.learner import *
 
 
 
@@ -64,6 +64,7 @@ class customLearner(Learner):
     """
     
     
+    
     def fit(self, n_epoch, lr=None, wd=None, cbs=None, reset_opt=False, start_epoch=0, start_iter = 0):
         
         if hasattr(self, 'resumeIter'):
@@ -122,6 +123,7 @@ def load(self:Learner, file, device=None, **kwargs):
     distrib_barrier()
     
     iteration = load_model(file, self.model, self.opt, device=device, **kwargs)
+    iteration = None
     if iteration is not None: self.resumeIter = iteration
     
     

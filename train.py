@@ -10,7 +10,8 @@ from fastai.text.all import *
 from fastai.distributed import *
 
 
-os.environ['NCCL_P2P_DISABLE']='1' #without this, NCCL (via accelerate.prepare) gets stuck during synchronization. 
+# os.environ['NCCL_P2P_DISABLE']='1' #without this, NCCL (via accelerate.prepare) gets stuck during synchronization. 
+os.environ['NCCL_P2P_LEVEL']='NVL'
 #You see an error like
 # RuntimeError: Exception occured in `DistributedTrainer` when calling event `before_fit`:  DDP expects same model across all ranks, but Rank 1 has 221 params, while rank 0 has inconsistent 0 params.
 #This seems like a NVIDIA problem due to the "asynchronous nature of CUDA kernels". Well then how can i make them synchronous? Asynchronous anyways does not look like a sound choice for parallel CUDA operations.
@@ -53,14 +54,15 @@ learn = customLearner(dls,
                 metrics=[accuracy, Perplexity()],
                 cbs = [check_and_save_model],
                 path = check_and_save_model.path,
-                model_dir=check_and_save_model.model_dir
+                model_dir=check_and_save_model.model_dir, 
                 ).to_bf16()
 
 
 #check and load previous checkpoint. Doesnt make sense to do it within the callback, because all callbacks are initialized in the Learner before they are even called
-# learn.check_and_load_learner(check_and_save_model.checkpoint_name, device = rank_distrib() if num_distrib() else None)
+learn.check_and_load_learner(check_and_save_model.checkpoint_name, device = rank_distrib() if num_distrib() else None)
 
-# learn.check_and_load_learner(check_and_save_model.checkpoint_name)
+# learn.check_and_load_learner(check_and_save_model.checkpoint_name, device = 'cpu')
 
 with learn.distrib_ctx():
+    print(learn.cbs)
     learn.fit_one_cycle(1, 1e-4)

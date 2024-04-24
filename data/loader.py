@@ -6,52 +6,6 @@ import mmap
 from fastai.distributed import *
 
 
-# class OWTData:
-#     """
-#     np.memmap leads to memory leaks. This python mmap implementation is better. 
-#     TODO:
-#     1. valid dataloader raises
-#     in __getitem__
-#         array = np.frombuffer(buffer, dtype=self.dtype, count=self.shape[1])
-#         ValueError: buffer is smaller than requested size 
-        
-#             """
-#     def __init__(self, path, block_size=512, dtype=None):
-#         self.file_path = path
-#         self.dtype = np.dtype(dtype)
-#         self.block_size = block_size
-
-#         # Open the file and create the mmap object
-#         self.file = open(self.file_path, 'rb')
-#         self.mm = mmap.mmap(self.file.fileno(), 0, access=mmap.ACCESS_READ)
-#         self.mm.madvise(mmap.MADV_RANDOM)
-#         self.length = (os.path.getsize(self.file_path)//self.dtype.itemsize) - self.block_size - 1
-        
-    
-#     def __len__(self):
-#         f'ONLY IN distributed training: Works okay till 400 million, on a 125GB RAM card. After, that memory explodes, and kills processes'
-#         f'Actual length of dataset is slightly greater than 9billion. '
-#         return 400_000_000
-#         # return self.length
-    
-#     def __getitem__(self, index):
-        
-#         # Calculate the byte offset for the requested index
-#         offset = (index) * self.dtype.itemsize
-#         # Calculate the number of bytes to read (block_size elements)
-#         num_bytes = (self.block_size + 1) * self.dtype.itemsize # +1 because we are extracting both x and y from the same block
-#         # Read the bytes and create a NumPy array from them
-#         self.mm.seek(offset)
-#         buffer = self.mm.read(num_bytes)
-#         array = np.frombuffer(buffer, dtype=self.dtype)
-#         x = array[:-1]
-#         y = array[1:]
-        
-#         x_tensor = torch.from_numpy(x.astype(np.int64)).type(torch.long)
-#         y_tensor = torch.from_numpy(y.astype(np.int64)).type(torch.long)
-#         return x_tensor, y_tensor
-
-
 class dataloader(DataLoader):
 
     def __init__(self, file, block_size, bs, dtype, device:str = 'cuda', seed:int = 42, sample_size = None):
@@ -88,13 +42,45 @@ class dataloader(DataLoader):
         
 
     
-    def __iter__(self, n= None):
+    def __iter__(self):
         'PAg: custom n: how many iterations do you want. By default, it is self.n//self.bs'
-        return self.batch_generator(n)
+        return self.batch_generator()
     
     
-    def batch_generator(self, n= None):
-        f'only uniquely samples 63% of all the data'
+    def batch_generator(self):
+        """
+        We almost sample almost all elements. 
+        If in each random iteration, i were to choose only one element, I would encounter only about N(1-1/e) = 0.63N items uniquely (about 63% of the dataset)
+        But since in each iteration, I sample bs items, the total elements encountered goes significantly up. We end up covering almost the entire dataset
+       
+        ACCORDING TO GPT4
+        import numpy as np
+
+        # Constants for sequential sampling
+        M = 9e9  # 9 billion elements (approx) #number of draws
+        N = 9e9  # 9 billion times (approx) #dataset size
+        K = 20   # 20 items each draw #batch size
+
+        # Assume the dataset does not wrap around
+        max_start_index = M - K + 1
+
+        # Probability that a specific item is in one particular draw (assuming random start index)
+        prob_in_one_draw = K / M
+
+        # Probability that a specific item is not in one particular draw
+        prob_not_in_one_draw = 1 - prob_in_one_draw
+
+        # Probability that a specific item is not in any draw across all N times
+        prob_not_in_any_draw = prob_not_in_one_draw**N
+
+        # Probability that a specific item is in at least one draw
+        prob_in_at_least_one_draw = 1 - prob_not_in_any_draw
+
+        # Expected number of unique items sampled at least once
+        expected_unique_samples_sequential = M * prob_in_at_least_one_draw
+        expected_unique_samples_sequential 
+        8999999981.449612
+        """
         
         self.before_iter()
     
@@ -133,68 +119,11 @@ class dataloader(DataLoader):
         
 
 
-
-def _round_to_multiple(number,multiple): return int(math.ceil(number/multiple)*multiple)
-
 class customDistributedDL(DistributedDL):
-    _default='dl'
-    
-    # def __init__(self,dl,rank=None,world_size=None,device=None):
-    #     super().__init__(dl, rank=rank, world_size=world_size, device = device)
-        # self.dl.n = _round_to_multiple(self.dl.n, self.world_size)// self.world_size
+    _default='dl' #in the parent class(es), _default is dataset. which is not defined in our case
     
     def __iter__(self):
         return iter(self.dl)
 
 
 
-# class RandomSubsetSampler():
-#     """
-#     A custom sampler that generates random subset of a given dataset.
-#     Used specifically for the valid dataset.
-#     In our case, we use validation dataset only for checking if the model is training properly. 
-#     Every n  training iterataions (here, 10,000), we check val_loss on this subset. 
-#     If the val_loss is better than the best val_loss, we save the model in the form of a checkpoint. 
-
-#     Args:
-#         dataset (Dataset): The dataset to sample from.
-#         subset_size (int): The size of the random subset to generate.
-
-#     Attributes:
-#         dataset (Dataset): The dataset to sample from.
-#         subset_size (int): The size of the random subset to generate.
-#     """
-#     def __init__(self, dataset, subset_size=1000):
-#         self.dataset = dataset
-#         self.subset_size = subset_size
-    
-#     def __len__(self):
-#         """
-#         Returns the size of the random subset.
-
-#         Returns:
-#             int: The size of the random subset.
-#         """
-#         return self.subset_size
-    
-#     def __iter__(self):
-#         """
-#         Generates an iterator over the indices of the random subset.
-
-#         Returns:
-#             iter: An iterator over the indices of the random subset.
-#         """
-#         idxs = torch.randint(len(self.dataset), size=(self.subset_size,))
-#         return iter(idxs)
-    
-
-# if __name__ =='__main__':
-    
-    #Just for testing
-
-    # from config import OpenWebTextConfig
-    # data = OWTData(OpenWebTextConfig().default_cache_dir/'train.bin', block_size=512, dtype=np.uint16)
-    # print(data.length)
-    # x,y = data[len(data)-1]
-    # print(x.shape, y.shape)
-    
