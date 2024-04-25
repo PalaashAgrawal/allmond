@@ -1,0 +1,384 @@
+training gpt-889.5M on 53883210 tokens
+Resuming training from iteration 4000 of epoch 0  using checkpoint checkpoints/gpt/gpt-889.5M.pth
+Resuming training from iteration 4000 of epoch 0  using checkpoint checkpoints/gpt/gpt-889.5M.pth
+Resuming training from iteration 4000 of epoch 0  using checkpoint checkpoints/gpt/gpt-889.5M.pth
+Resuming training from iteration 4000 of epoch 0  using checkpoint checkpoints/gpt/gpt-889.5M.pth
+wandb: Currently logged in as: palaashagrawal. Use `wandb login --relogin` to force relogin
+wandb: Currently logged in as: palaashagrawal. Use `wandb login --relogin` to force relogin
+wandb: Currently logged in as: palaashagrawal. Use `wandb login --relogin` to force relogin
+wandb: Currently logged in as: palaashagrawal. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.16.6
+wandb: Run data is saved locally in /home/agrawalp2/tinyUniverse/wandb/run-20240425_140406-c06cxoxe
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run simplewiki_gpt-889.5M_scratch
+wandb: ⭐️ View project at https://wandb.ai/palaashagrawal/tinylm
+wandb: 🚀 View run at https://wandb.ai/palaashagrawal/tinylm/runs/c06cxoxe
+wandb: Tracking run with wandb version 0.16.6
+wandb: Run data is saved locally in /home/agrawalp2/tinyUniverse/wandb/run-20240425_140406-rqy1od15
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run simplewiki_gpt-889.5M_scratch
+wandb: ⭐️ View project at https://wandb.ai/palaashagrawal/tinylm
+wandb: 🚀 View run at https://wandb.ai/palaashagrawal/tinylm/runs/rqy1od15
+wandb: Tracking run with wandb version 0.16.6
+wandb: Run data is saved locally in /home/agrawalp2/tinyUniverse/wandb/run-20240425_140406-6b3rmfg1
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run simplewiki_gpt-889.5M_scratch
+wandb: ⭐️ View project at https://wandb.ai/palaashagrawal/tinylm
+wandb: 🚀 View run at https://wandb.ai/palaashagrawal/tinylm/runs/6b3rmfg1
+wandb: Tracking run with wandb version 0.16.6
+wandb: Run data is saved locally in /home/agrawalp2/tinyUniverse/wandb/run-20240425_140406-uw66hojx
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run simplewiki_gpt-889.5M_scratch
+wandb: ⭐️ View project at https://wandb.ai/palaashagrawal/tinylm
+wandb: 🚀 View run at https://wandb.ai/palaashagrawal/tinylm/runs/uw66hojx
+Could not gather input dimensions
+WandbCallback was not able to prepare a DataLoader for logging prediction samples -> 'memmap' object has no attribute 'items'
+█epoch     train_loss  valid_loss  accuracy  perplexity  time    
+█Epoch 1/1 : |----------------------------------------| 0.00% [0/13470803 00:00<?]Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/home/agrawalp2/tinyUniverse/train.py", line 90, in <module>
+    learn.fit_one_cycle(1, 1e-4)
+  File "/home/agrawalp2/tinyUniverse/train.py", line 90, in <module>
+    learn.fit_one_cycle(1, 1e-4)
+  File "/home/agrawalp2/tinyUniverse/train.py", line 90, in <module>
+    learn.fit_one_cycle(1, 1e-4)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/callback/schedule.py", line 119, in fit_one_cycle
+    self.fit(n_epoch, cbs=ParamScheduler(scheds)+L(cbs), reset_opt=reset_opt, wd=wd, start_epoch=start_epoch)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/callback/schedule.py", line 119, in fit_one_cycle
+    self.fit(n_epoch, cbs=ParamScheduler(scheds)+L(cbs), reset_opt=reset_opt, wd=wd, start_epoch=start_epoch)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/callback/schedule.py", line 119, in fit_one_cycle
+    self.fit(n_epoch, cbs=ParamScheduler(scheds)+L(cbs), reset_opt=reset_opt, wd=wd, start_epoch=start_epoch)
+  File "/home/agrawalp2/tinyUniverse/model/customLearner.py", line 86, in fit
+    self._with_events(self._do_fit, 'fit', CancelFitException, self._end_cleanup)
+  File "/home/agrawalp2/tinyUniverse/model/customLearner.py", line 86, in fit
+    self._with_events(self._do_fit, 'fit', CancelFitException, self._end_cleanup)
+  File "/home/agrawalp2/tinyUniverse/model/customLearner.py", line 86, in fit
+    self._with_events(self._do_fit, 'fit', CancelFitException, self._end_cleanup)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 200, in _with_events
+    try: self(f'before_{event_type}');  f()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 200, in _with_events
+    try: self(f'before_{event_type}');  f()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 200, in _with_events
+    try: self(f'before_{event_type}');  f()
+  File "/home/agrawalp2/tinyUniverse/model/customLearner.py", line 91, in _do_fit
+    self._with_events(self._do_epoch, 'epoch', CancelEpochException)
+  File "/home/agrawalp2/tinyUniverse/model/customLearner.py", line 91, in _do_fit
+    self._with_events(self._do_epoch, 'epoch', CancelEpochException)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 200, in _with_events
+    try: self(f'before_{event_type}');  f()
+  File "/home/agrawalp2/tinyUniverse/model/customLearner.py", line 91, in _do_fit
+    self._with_events(self._do_epoch, 'epoch', CancelEpochException)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 200, in _with_events
+    try: self(f'before_{event_type}');  f()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 248, in _do_epoch
+    self._do_epoch_train()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 248, in _do_epoch
+    self._do_epoch_train()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 200, in _with_events
+    try: self(f'before_{event_type}');  f()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 240, in _do_epoch_train
+    self._with_events(self.all_batches, 'train', CancelTrainException)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 240, in _do_epoch_train
+    self._with_events(self.all_batches, 'train', CancelTrainException)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 200, in _with_events
+    try: self(f'before_{event_type}');  f()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 248, in _do_epoch
+    self._do_epoch_train()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 200, in _with_events
+    try: self(f'before_{event_type}');  f()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 206, in all_batches
+    for o in enumerate(self.dl): self.one_batch(*o)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 206, in all_batches
+    for o in enumerate(self.dl): self.one_batch(*o)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 240, in _do_epoch_train
+    self._with_events(self.all_batches, 'train', CancelTrainException)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 236, in one_batch
+    self._with_events(self._do_one_batch, 'batch', CancelBatchException)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 236, in one_batch
+    self._with_events(self._do_one_batch, 'batch', CancelBatchException)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 202, in _with_events
+    self(f'after_{event_type}');  final()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 200, in _with_events
+    try: self(f'before_{event_type}');  f()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 202, in _with_events
+    self(f'after_{event_type}');  final()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 173, in __call__
+    def __call__(self, event_name): L(event_name).map(self._call_one)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 173, in __call__
+    def __call__(self, event_name): L(event_name).map(self._call_one)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 206, in all_batches
+    for o in enumerate(self.dl): self.one_batch(*o)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastcore/foundation.py", line 156, in map
+    def map(self, f, *args, **kwargs): return self._new(map_ex(self, f, *args, gen=False, **kwargs))
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastcore/foundation.py", line 156, in map
+    def map(self, f, *args, **kwargs): return self._new(map_ex(self, f, *args, gen=False, **kwargs))
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastcore/basics.py", line 840, in map_ex
+    return list(res)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 236, in one_batch
+    self._with_events(self._do_one_batch, 'batch', CancelBatchException)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastcore/basics.py", line 840, in map_ex
+    return list(res)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastcore/basics.py", line 825, in __call__
+    return self.func(*fargs, **kwargs)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastcore/basics.py", line 825, in __call__
+    return self.func(*fargs, **kwargs)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 202, in _with_events
+    self(f'after_{event_type}');  final()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 177, in _call_one
+    for cb in self.cbs.sorted('order'): cb(event_name)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 177, in _call_one
+    for cb in self.cbs.sorted('order'): cb(event_name)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 173, in __call__
+    def __call__(self, event_name): L(event_name).map(self._call_one)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/callback/core.py", line 62, in __call__
+    except Exception as e: raise modify_exception(e, f'Exception occured in `{self.__class__.__name__}` when calling event `{event_name}`:\n\t{e.args[0]}', replace=True)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/callback/core.py", line 62, in __call__
+    except Exception as e: raise modify_exception(e, f'Exception occured in `{self.__class__.__name__}` when calling event `{event_name}`:\n\t{e.args[0]}', replace=True)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastcore/foundation.py", line 156, in map
+    def map(self, f, *args, **kwargs): return self._new(map_ex(self, f, *args, gen=False, **kwargs))
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/callback/core.py", line 60, in __call__
+    try: res = getcallable(self, event_name)()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/callback/core.py", line 60, in __call__
+    try: res = getcallable(self, event_name)()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastcore/basics.py", line 840, in map_ex
+    return list(res)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 562, in after_batch
+    for met in mets: met.accumulate(self.learn)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 562, in after_batch
+    for met in mets: met.accumulate(self.learn)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastcore/basics.py", line 825, in __call__
+    return self.func(*fargs, **kwargs)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 511, in accumulate
+    self.val = torch.lerp(to_detach(learn.loss.mean()), self.val, self.beta)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 511, in accumulate
+    self.val = torch.lerp(to_detach(learn.loss.mean()), self.val, self.beta)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 177, in _call_one
+    for cb in self.cbs.sorted('order'): cb(event_name)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 244, in to_detach
+    return apply(_inner, b, cpu=cpu, gather=gather)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 244, in to_detach
+    return apply(_inner, b, cpu=cpu, gather=gather)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/callback/core.py", line 62, in __call__
+    except Exception as e: raise modify_exception(e, f'Exception occured in `{self.__class__.__name__}` when calling event `{event_name}`:\n\t{e.args[0]}', replace=True)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 224, in apply
+    res = func(x, *args, **kwargs)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 224, in apply
+    res = func(x, *args, **kwargs)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/callback/core.py", line 60, in __call__
+    try: res = getcallable(self, event_name)()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 242, in _inner
+    if gather: x = maybe_gather(x)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 242, in _inner
+    if gather: x = maybe_gather(x)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 562, in after_batch
+    for met in mets: met.accumulate(self.learn)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 233, in maybe_gather
+    torch.distributed.all_gather(res, x.contiguous() if ndim > 0 else x[None])
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 233, in maybe_gather
+    torch.distributed.all_gather(res, x.contiguous() if ndim > 0 else x[None])
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 511, in accumulate
+    self.val = torch.lerp(to_detach(learn.loss.mean()), self.val, self.beta)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/torch/distributed/c10d_logger.py", line 72, in wrapper
+    return func(*args, **kwargs)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/torch/distributed/c10d_logger.py", line 72, in wrapper
+    return func(*args, **kwargs)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 244, in to_detach
+    return apply(_inner, b, cpu=cpu, gather=gather)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/torch/distributed/distributed_c10d.py", line 2615, in all_gather
+    work = default_pg.allgather([tensor_list], [tensor])
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/torch/distributed/distributed_c10d.py", line 2615, in all_gather
+    work = default_pg.allgather([tensor_list], [tensor])
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 224, in apply
+    res = func(x, *args, **kwargs)
+RuntimeError: Exception occured in `Recorder` when calling event `after_batch`:
+	No backend type associated with device type cpu
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 242, in _inner
+    if gather: x = maybe_gather(x)
+RuntimeError: Exception occured in `Recorder` when calling event `after_batch`:
+	No backend type associated with device type cpu
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 233, in maybe_gather
+    torch.distributed.all_gather(res, x.contiguous() if ndim > 0 else x[None])
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/torch/distributed/c10d_logger.py", line 72, in wrapper
+    return func(*args, **kwargs)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/torch/distributed/distributed_c10d.py", line 2615, in all_gather
+    work = default_pg.allgather([tensor_list], [tensor])
+RuntimeError: Exception occured in `Recorder` when calling event `after_batch`:
+	No backend type associated with device type cpu
+Traceback (most recent call last):
+  File "/home/agrawalp2/tinyUniverse/train.py", line 90, in <module>
+    learn.fit_one_cycle(1, 1e-4)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/callback/schedule.py", line 119, in fit_one_cycle
+    self.fit(n_epoch, cbs=ParamScheduler(scheds)+L(cbs), reset_opt=reset_opt, wd=wd, start_epoch=start_epoch)
+  File "/home/agrawalp2/tinyUniverse/model/customLearner.py", line 86, in fit
+    self._with_events(self._do_fit, 'fit', CancelFitException, self._end_cleanup)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 200, in _with_events
+    try: self(f'before_{event_type}');  f()
+  File "/home/agrawalp2/tinyUniverse/model/customLearner.py", line 91, in _do_fit
+    self._with_events(self._do_epoch, 'epoch', CancelEpochException)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 200, in _with_events
+    try: self(f'before_{event_type}');  f()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 248, in _do_epoch
+    self._do_epoch_train()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 240, in _do_epoch_train
+    self._with_events(self.all_batches, 'train', CancelTrainException)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 200, in _with_events
+    try: self(f'before_{event_type}');  f()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 206, in all_batches
+    for o in enumerate(self.dl): self.one_batch(*o)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 236, in one_batch
+    self._with_events(self._do_one_batch, 'batch', CancelBatchException)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 202, in _with_events
+    self(f'after_{event_type}');  final()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 173, in __call__
+    def __call__(self, event_name): L(event_name).map(self._call_one)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastcore/foundation.py", line 156, in map
+    def map(self, f, *args, **kwargs): return self._new(map_ex(self, f, *args, gen=False, **kwargs))
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastcore/basics.py", line 840, in map_ex
+    return list(res)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastcore/basics.py", line 825, in __call__
+    return self.func(*fargs, **kwargs)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 177, in _call_one
+    for cb in self.cbs.sorted('order'): cb(event_name)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/callback/core.py", line 62, in __call__
+    except Exception as e: raise modify_exception(e, f'Exception occured in `{self.__class__.__name__}` when calling event `{event_name}`:\n\t{e.args[0]}', replace=True)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/callback/core.py", line 60, in __call__
+    try: res = getcallable(self, event_name)()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 562, in after_batch
+    for met in mets: met.accumulate(self.learn)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/learner.py", line 511, in accumulate
+    self.val = torch.lerp(to_detach(learn.loss.mean()), self.val, self.beta)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 244, in to_detach
+    return apply(_inner, b, cpu=cpu, gather=gather)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 224, in apply
+    res = func(x, *args, **kwargs)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 242, in _inner
+    if gather: x = maybe_gather(x)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/fastai/torch_core.py", line 233, in maybe_gather
+    torch.distributed.all_gather(res, x.contiguous() if ndim > 0 else x[None])
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/torch/distributed/c10d_logger.py", line 72, in wrapper
+    return func(*args, **kwargs)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/torch/distributed/distributed_c10d.py", line 2615, in all_gather
+    work = default_pg.allgather([tensor_list], [tensor])
+RuntimeError: Exception occured in `Recorder` when calling event `after_batch`:
+	No backend type associated with device type cpu
+wandb: - 0.004 MB of 0.004 MB uploadedwandb: - 0.004 MB of 0.004 MB uploadedwandb: - 0.004 MB of 0.004 MB uploadedwandb: - 0.004 MB of 0.004 MB uploadedwandb: \ 0.004 MB of 0.004 MB uploadedwandb: \ 0.004 MB of 0.004 MB uploadedwandb: \ 0.004 MB of 0.004 MB uploadedwandb: \ 0.004 MB of 0.004 MB uploadedwandb: | 0.004 MB of 0.004 MB uploadedwandb: | 0.004 MB of 0.004 MB uploadedwandb: | 0.004 MB of 0.004 MB uploadedwandb: | 0.004 MB of 0.004 MB uploadedwandb: / 0.004 MB of 0.004 MB uploadedwandb: / 0.004 MB of 0.004 MB uploadedwandb: / 0.004 MB of 0.004 MB uploadedwandb: / 0.004 MB of 0.004 MB uploadedwandb: - 0.004 MB of 0.004 MB uploadedwandb: - 0.004 MB of 0.004 MB uploadedwandb: - 0.004 MB of 0.004 MB uploadedwandb: - 0.004 MB of 0.004 MB uploadedwandb: \ 0.004 MB of 0.004 MB uploadedwandb: \ 0.004 MB of 0.004 MB uploadedwandb: \ 0.004 MB of 0.004 MB uploadedwandb: \ 0.014 MB of 0.018 MB uploadedwandb: | 0.007 MB of 0.018 MB uploadedwandb: | 0.007 MB of 0.018 MB uploadedwandb: | 0.004 MB of 0.004 MB uploadedwandb: | 0.014 MB of 0.027 MB uploadedwandb: / 0.009 MB of 0.018 MB uploadedwandb: / 0.007 MB of 0.018 MB uploadedwandb: / 0.004 MB of 0.004 MB uploadedwandb: / 0.014 MB of 0.027 MB uploadedwandb: - 0.018 MB of 0.018 MB uploadedwandb: - 0.007 MB of 0.018 MB uploadedwandb: - 0.027 MB of 0.027 MB uploadedwandb: \ 0.018 MB of 0.018 MB uploadedwandb: 🚀 View run simplewiki_gpt-889.5M_scratch at: https://wandb.ai/palaashagrawal/tinylm/runs/6b3rmfg1
+wandb: ⭐️ View project at: https://wandb.ai/palaashagrawal/tinylm
+wandb: Synced 6 W&B file(s), 0 media file(s), 2 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20240425_140406-6b3rmfg1/logs
+wandb: - 0.004 MB of 0.004 MB uploadedwandb: \ 0.018 MB of 0.018 MB uploadedwandb: 🚀 View run simplewiki_gpt-889.5M_scratch at: https://wandb.ai/palaashagrawal/tinylm/runs/uw66hojx
+wandb: ⭐️ View project at: https://wandb.ai/palaashagrawal/tinylm
+wandb: Synced 6 W&B file(s), 0 media file(s), 2 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20240425_140406-uw66hojx/logs
+wandb: | 0.018 MB of 0.018 MB uploadedwandb: 🚀 View run simplewiki_gpt-889.5M_scratch at: https://wandb.ai/palaashagrawal/tinylm/runs/c06cxoxe
+wandb: ⭐️ View project at: https://wandb.ai/palaashagrawal/tinylm
+wandb: Synced 6 W&B file(s), 0 media file(s), 2 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20240425_140406-c06cxoxe/logs
+wandb: \ 0.007 MB of 0.014 MB uploadedException in thread NetStatThr:
+Traceback (most recent call last):
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/threading.py", line 1016, in _bootstrap_inner
+    Exception in thread self.run()IntMsgThr
+:
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/threading.py", line 953, in run
+Traceback (most recent call last):
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/threading.py", line 1016, in _bootstrap_inner
+    self._target(*self._args, **self._kwargs)
+      File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/wandb_run.py", line 268, in check_network_status
+self.run()
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/threading.py", line 953, in run
+        self._loop_check_status(self._target(*self._args, **self._kwargs)
+
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/wandb_run.py", line 224, in _loop_check_status
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/wandb_run.py", line 300, in check_internal_messages
+    local_handle = request()    
+self._loop_check_status(  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/interface/interface.py", line 848, in deliver_network_status
+
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/wandb_run.py", line 224, in _loop_check_status
+        return self._deliver_network_status(status)local_handle = request()
+
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/interface/interface_shared.py", line 510, in _deliver_network_status
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/interface/interface.py", line 856, in deliver_internal_messages
+        return self._deliver_record(record)return self._deliver_internal_messages(internal_message)
+
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/interface/interface_shared.py", line 459, in _deliver_record
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/interface/interface_shared.py", line 516, in _deliver_internal_messages
+    handle = mailbox._deliver_record(record, interface=self)
+      File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/lib/mailbox.py", line 455, in _deliver_record
+return self._deliver_record(record)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/interface/interface_shared.py", line 459, in _deliver_record
+        interface._publish(record)handle = mailbox._deliver_record(record, interface=self)
+
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/interface/interface_sock.py", line 51, in _publish
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/lib/mailbox.py", line 455, in _deliver_record
+        interface._publish(record)self._sock_client.send_record_publish(record)
+
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/interface/interface_sock.py", line 51, in _publish
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/lib/sock_client.py", line 221, in send_record_publish
+        self._sock_client.send_record_publish(record)self.send_server_request(server_req)
+
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/lib/sock_client.py", line 221, in send_record_publish
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/lib/sock_client.py", line 155, in send_server_request
+    self.send_server_request(server_req)    
+self._send_message(msg)  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/lib/sock_client.py", line 155, in send_server_request
+
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/lib/sock_client.py", line 152, in _send_message
+    self._send_message(msg)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/lib/sock_client.py", line 152, in _send_message
+    self._sendall_with_error_handle(header + data)
+      File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/lib/sock_client.py", line 130, in _sendall_with_error_handle
+self._sendall_with_error_handle(header + data)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/wandb/sdk/lib/sock_client.py", line 130, in _sendall_with_error_handle
+    sent = self._sock.send(data)
+    BrokenPipeErrorsent = self._sock.send(data): 
+[Errno 32] Broken pipeBrokenPipeError
+: [Errno 32] Broken pipe
+wandb: | 0.009 MB of 0.018 MB uploadedwandb: / 0.018 MB of 0.018 MB uploadedwandb: 🚀 View run simplewiki_gpt-889.5M_scratch at: https://wandb.ai/palaashagrawal/tinylm/runs/rqy1od15
+wandb: ⭐️ View project at: https://wandb.ai/palaashagrawal/tinylm
+wandb: Synced 6 W&B file(s), 0 media file(s), 2 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20240425_140406-rqy1od15/logs
+[2024-04-25 14:04:28,003] torch.distributed.elastic.multiprocessing.api: [WARNING] Sending process 761395 closing signal SIGTERM
+[2024-04-25 14:04:28,469] torch.distributed.elastic.multiprocessing.api: [ERROR] failed (exitcode: 1) local_rank: 0 (pid: 761393) of binary: /home/agrawalp2/miniconda3/envs/tinylm/bin/python
+Traceback (most recent call last):
+  File "/home/agrawalp2/miniconda3/envs/tinylm/bin/accelerate", line 8, in <module>
+    sys.exit(main())
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/accelerate/commands/accelerate_cli.py", line 46, in main
+    args.func(args)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/accelerate/commands/launch.py", line 1066, in launch_command
+    multi_gpu_launcher(args)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/accelerate/commands/launch.py", line 711, in multi_gpu_launcher
+    distrib_run.run(args)
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/torch/distributed/run.py", line 803, in run
+    elastic_launch(
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 135, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/home/agrawalp2/miniconda3/envs/tinylm/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 268, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+train.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2024-04-25_14:04:28
+  host      : IHP-SPD-E1M162
+  rank      : 1 (local_rank: 1)
+  exitcode  : 1 (pid: 761394)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[2]:
+  time      : 2024-04-25_14:04:28
+  host      : IHP-SPD-E1M162
+  rank      : 3 (local_rank: 3)
+  exitcode  : 1 (pid: 761396)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2024-04-25_14:04:28
+  host      : IHP-SPD-E1M162
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 761393)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

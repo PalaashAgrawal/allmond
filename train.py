@@ -64,25 +64,25 @@ learn = customLearner(dls,
                 model, 
                 loss_func=CrossEntropyLossFlat(), 
                 metrics=[accuracy, Perplexity()],
-                cbs = [check_and_save_model, WandbCallback(),],
+                cbs = [check_and_save_model,
+                    #    WandbCallback(),
+                       ],
                 path = check_and_save_model.path,
                 model_dir=check_and_save_model.model_dir, 
                 ).to_bf16()
 
-
 #check and load previous checkpoint. Doesnt make sense to do it within the callback, because all callbacks are initialized in the Learner before they are even called
 learn.check_and_load_learner(check_and_save_model.checkpoint_name, device = rank_distrib() if num_distrib() else None)
 
-
-wandb.init(
-    project="tinylm",
-    name = f"{id}_{str(model)}_{mode}",
-    # track hyperparameters and run metadata
-    config={
-    "architecture": str(model),
-    "dataset": "Wikipedia Simple",
-    }
-)
+# wandb.init(
+#     project="tinylm",
+#     name = f"{id}_{str(model)}_{mode}",
+#     # track hyperparameters and run metadata
+#     config={
+#     "architecture": str(model),
+#     "dataset": "Wikipedia Simple",
+#     }
+# )
 
 
 

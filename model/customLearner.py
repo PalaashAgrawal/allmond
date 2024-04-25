@@ -96,8 +96,8 @@ class customLearner(Learner):
         f'check if a checkpoint exists'
         checkpoint = self.path/self.model_dir/f'{file}.pth'
         if checkpoint.exists():
-            print(f"Resuming training from iteration {getattr(getattr(self, 'resumeIter', None), 'iter', 0)} of epoch {getattr(getattr(self, 'resumeIter', None), 'epoch', 0)}  using checkpoint {str(checkpoint)}")
             self.load(file, device = device)
+            print(f"Resuming training from iteration {getattr(self, 'resumeIter', {}).get('iter', 0)} of epoch {getattr(self, 'resumeIter', {}).get('epoch', 0)}  using checkpoint {str(checkpoint)}")
 
 @patch
 @delegates(save_model)
@@ -123,7 +123,7 @@ def load(self:Learner, file, device=None, **kwargs):
     distrib_barrier()
     
     iteration = load_model(file, self.model, self.opt, device=device, **kwargs)
-    iteration = None
+    # iteration = None
     if iteration is not None: self.resumeIter = iteration
     
     
@@ -133,7 +133,7 @@ def load(self:Learner, file, device=None, **kwargs):
 class SkipToIter(Callback):
     "Skip training up to   `iter`th iteration in `epoch`th epoch"
     "if epoch and iter passed during initialization are not 0, they override values derived from loaded hyperparameters in learn.load"
-    order = 70
+    order = -20
     
     def __init__(self, epoch:int, iter: int = 0):
         self._skip_to_epoch = epoch
