@@ -84,11 +84,16 @@ class customLearner(Learner):
                         
             
             self._with_events(self._do_fit, 'fit', CancelFitException, self._end_cleanup)
-        
-    def _do_fit(self):
-        for epoch in range(self.n_epoch):
-            self.epoch=epoch
-            self._with_events(self._do_epoch, 'epoch', CancelEpochException)
+
+    
+    def _with_events(self, f, event_type, ex, final=noop):
+        """
+        PAg: self(f'after_{event_type}') moved inside try block. 
+        I opened an issue regarding this, for more deets: https://github.com/fastai/fastai/issues/4030
+        """ 
+        try: self(f'before_{event_type}');  f() ; self(f'after_{event_type}')
+        except ex: self(f'after_cancel_{event_type}')
+        final()
     
     
     #PAg: not for PR
@@ -99,6 +104,24 @@ class customLearner(Learner):
             self.load(file, device = device)
             print(f"Resuming training from iteration {getattr(self, 'resumeIter', {}).get('iter', 0)} of epoch {getattr(self, 'resumeIter', {}).get('epoch', 0)}  using checkpoint {str(checkpoint)}")
 
+
+# %% ../../nbs/14_callback.schedule.ipynb 46
+@patch
+def fit_one_cycle(self:Learner, n_epoch, lr_max=None, div=25., div_final=1e5, pct_start=0.25, wd=None,
+                  moms=None, cbs=None, reset_opt=False, start_epoch=0, start_iter = 0):
+    "PAg: added support start_iter"
+    "Fit `self.model` for `n_epoch` using the 1cycle policy."
+    if self.opt is None: self.create_opt()
+    self.opt.set_hyper('lr', self.lr if lr_max is None else lr_max)
+    lr_max = np.array([h['lr'] for h in self.opt.hypers])
+    scheds = {'lr': combined_cos(pct_start, lr_max/div, lr_max, lr_max/div_final),
+              'mom': combined_cos(pct_start, *(self.moms if moms is None else moms))}
+    
+    self.fit(n_epoch, cbs=ParamScheduler(scheds)+L(cbs), reset_opt=reset_opt, wd=wd, start_epoch=start_epoch, start_iter = start_iter)
+    
+    
+    
+    
 @patch
 @delegates(save_model)
 def save(self:Learner, file, **kwargs):
@@ -123,7 +146,6 @@ def load(self:Learner, file, device=None, **kwargs):
     distrib_barrier()
     
     iteration = load_model(file, self.model, self.opt, device=device, **kwargs)
-    # iteration = None
     if iteration is not None: self.resumeIter = iteration
     
     
@@ -133,9 +155,9 @@ def load(self:Learner, file, device=None, **kwargs):
 class SkipToIter(Callback):
     "Skip training up to   `iter`th iteration in `epoch`th epoch"
     "if epoch and iter passed during initialization are not 0, they override values derived from loaded hyperparameters in learn.load"
-    order = -20
+    order = 51
     
-    def __init__(self, epoch:int, iter: int = 0):
+    def __init__(self, epoch:int, iter: int):
         self._skip_to_epoch = epoch
         self._skip_to_iter = iter
         

@@ -30,3 +30,9 @@ TODO this week:
 
 
 
+
+TODO Changes in fastai PR
+1. in TrainEvalCallback - need to adjust pct_train
+2. in fit_one_cycle - need to include start_iter argument . 
+
+
