@@ -1,4 +1,7 @@
-#ignore all folders that start with "checkpoints"
-
 # In[ ]:
-checkpoints
+checkpoints/
+wandb/
+__pycache__/
+*.out
+
+
