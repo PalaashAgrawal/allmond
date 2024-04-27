@@ -1,5 +1,0 @@
-datasets
-hydra-core
-
-#benchmarks
-mteb

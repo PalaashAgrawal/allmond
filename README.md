@@ -5,7 +5,7 @@
 A concise template to train LLMs, using fast.ai and PyTorch. Only focus on the most important parts (data and model, and maybe training strategies), without writing, or scrolling through unnecessary code. 
 
 <p align="center">
-  <img src="assets/cover.webp" width="35%">
+  <img src=".assets/cover.webp" width="35%">
 </p>
 
 
