@@ -1,6 +1,6 @@
+from fastai.data.all import noop
 from fastai.vision.all import * #placeholder to resolve all errors
-from fastai.learner import *
-
+from fastai.learner import *    
 
 
 def save_model(file, model, opt, iteration, with_opt = True, with_iter = True, pickle_protocol = 2, **torch_save_kwargs):
@@ -67,6 +67,8 @@ class LLMLearner(Learner):
             
         if start_epoch != 0 or start_iter != 0:
             cbs = L(cbs) + SkipToIter(start_epoch, start_iter)
+            
+            
         
         
         with self.added_cbs(cbs):
@@ -78,6 +80,18 @@ class LLMLearner(Learner):
                         
             
             self._with_events(self._do_fit, 'fit', CancelFitException, self._end_cleanup)
+            
+            
+    #PAg: not for pR
+    def _with_events(self, f, event_type, ex, final=noop):
+        """
+        Not a fool-proof solution. This function is a very core function in Learner. Changing this isnt ideal. 
+        But its required for resumable training (training resumed from a particular iteration). 
+        I even submitted a PR for this: https://github.com/fastai/fastai/issues/4030. 
+        """
+        try: self(f'before_{event_type}');  f();  self(f'after_{event_type}')
+        except ex: self(f'after_cancel_{event_type}')
+        final()
 
 
     
@@ -151,10 +165,6 @@ class SkipToIter(Callback):
             raise CancelEpochException
         
     def before_batch(self):
-        self.learn.cancel_train = False
         if self.iter < self._skip_to_iter:
             raise CancelBatchException
     
-    def after_cancel_batch(self):
-        f'for the recorder class to skip loss accumulation'
-        self.learn.cancel_train = True
