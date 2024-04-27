@@ -1,6 +1,6 @@
 from data.unlabeled import TiktokenTokenizer, download_dataset
 from data.config import OpenWebTextConfig, WikipediaSimpleConfig
-from data.loader import dataloader, customDistributedDL
+from data.loader import memmapDL, distributedMemmapDL
 
 from model.gpt import GPT
 
@@ -44,18 +44,19 @@ tokenizer = TiktokenTokenizer(from_model = "gpt2")
 
 #________________________________________data_____________________________________
 
-rank0_first(lambda: download_dataset(dataset = dataset, encoder = tokenizer)) #check if data exists
+# train_path, valid_path = rank0_first(lambda: download_dataset(dataset = dataset, encoder = tokenizer)) #check if data exists
+train_path, valid_path = download_dataset(dataset = dataset, encoder = tokenizer) #check if data exists
 
-train_dl = dataloader(WikipediaSimpleConfig().default_cache_dir/'train.bin', bs = bs, block_size=block_size, 
+train_dl = memmapDL(train_path, bs = bs, block_size=block_size, 
                       dtype=tokenizer._get_numpy_dtype())
-valid_dl = dataloader(WikipediaSimpleConfig().default_cache_dir/'val.bin', bs = bs, block_size=block_size, 
+valid_dl = memmapDL(valid_path, bs = bs, block_size=block_size, 
                       dtype=tokenizer._get_numpy_dtype(), 
                       sample_size = valid_sampler_size)
 
 if num_distrib(): #distributed training
-    train_dl, valid_dl = customDistributedDL(train_dl), customDistributedDL(valid_dl)
+    train_dl, valid_dl = distributedMemmapDL(train_dl), distributedMemmapDL(valid_dl)
     
-if not rank_distrib(): print(f'training {str(model)} on {train_dl.n} tokens')
+if not rank_distrib(): print(f'training {str(model)} on {train_dl.n} tokens') #print only for rank0
     
 
 dls = DataLoaders(train_dl, valid_dl)

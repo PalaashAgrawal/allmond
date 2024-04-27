@@ -6,7 +6,7 @@ import mmap
 from fastai.distributed import *
 
 
-class dataloader(DataLoader):
+class memmapDL(DataLoader):
 
     def __init__(self, file, block_size, bs, dtype, device:str = 'cuda', seed:int = 42, sample_size = None):
         """
@@ -119,7 +119,7 @@ class dataloader(DataLoader):
         
 
 
-class customDistributedDL(DistributedDL):
+class distributedMemmapDL(DistributedDL):
     _default='dl' #in the parent class(es), _default is dataset. which is not defined in our case
     
     def __iter__(self):

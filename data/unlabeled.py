@@ -24,7 +24,8 @@ class unlabeledDataset():
     
     def __init__(self, datasetConfig , n_proc=8, cache_dir=None, force_redownload = False):
         """
-        Initialize the UnlabeledDataLoader object.
+        Download the dataset, tokenize it using an encoder and save it back to disk for fast retrieval during LLM training. 
+        By default, saves the dataset into train.bin and val.bin (if config.split_into_train_val = True)
 
         Args:
             dataset_name (str): The name of the dataset to load. 
@@ -42,10 +43,16 @@ class unlabeledDataset():
         self.n_proc = n_proc
         self.cache_dir = Path(cache_dir or datasetConfig.default_cache_dir)
         self.force_redownload = force_redownload
+        self.splits = ['train'] + [getattr(self.config, 'split_name', 'val')] if getattr(self.config, 'split_into_train_val', True) else []
         
-        if self.cache_dir is not None: self.cache_dir.mkdir(parents=True, exist_ok=True)
+        
+        
+        if self.cache_dir is not None: 
+            if not self.force_redownload and self.cache_dir.exists(): return 
+            
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
                 
-        
+        #Assuming that datasets always returns "train" and "test"
         self.dataset = datasets.load_dataset(
                                             self.config.dataset_name,
                                             num_proc=self.n_proc,
@@ -81,7 +88,7 @@ class unlabeledDataset():
         self.dataset[f'{self.val_name}'] = self.dataset.pop('test') #rename the test set to val
         
         
-        self.splits = self.dataset.keys()
+        # self.splits = self.dataset.keys()
         
         return (self.dataset[key] for key in self.splits)
     
@@ -94,6 +101,9 @@ class unlabeledDataset():
         Returns: None if save_tokens_to_disk is True. (saves tokens to disk using `dtype` format. Use these files directly)
         Else, returns the tokenized dataset.
         """
+        save_path = save_path or self.cache_dir
+        self.paths = [save_path/f'{o}.bin' for o in self.splits]
+        
         
         def _text_extractor(f, example):
             """
@@ -103,9 +113,7 @@ class unlabeledDataset():
             return f(example['text'])
         
         
-        if self._check_data_on_disk():
-            print(f'Tokenized dataset already exists at {self.cache_dir}. You can load the tokenized dataset directly from disk.')
-            return None
+        if self._check_data_on_disk(): return self.paths # print(f'Tokenized dataset alre/ady exists at {self.cache_dir}.')
             
 
         self.tokens = self.dataset.map(lambda example: _text_extractor(encoder_fn, example), 
@@ -113,8 +121,12 @@ class unlabeledDataset():
                                        desc="tokenizing the splits", 
                                        num_proc=self.n_proc, )
         
-        if save_tokens_to_disk: self._save_tokens_to_disk(self.tokens, path = save_path, dtype = dtype)
-        else: return self.tokens
+        if not save_tokens_to_disk: return self.tokens #in case user wants the tokens directly
+        
+        self._save_tokens_to_disk(self.tokens, path = save_path, dtype = dtype)
+        return self.paths
+        
+         
         
     
     def _save_tokens_to_disk(self,  tokens, num_shards=1024, path =None, dtype = None):
@@ -300,7 +312,8 @@ def download_dataset(dataset:str, encoder = TiktokenTokenizer(), force_redownloa
     dataset_config = config_dict[dataset]()
     n_procs = max(1, int(os.cpu_count()-2)) #leave atleast 2 cores for other processes
     ds = unlabeledDataset(dataset_config, n_procs, force_redownload=force_redownload)
-    ds.tokenize(encoder.tokenize_dataset, save_tokens_to_disk = True, dtype = encoder._get_numpy_dtype())
+    path = ds.tokenize(encoder.tokenize_dataset, save_tokens_to_disk = True, dtype = encoder._get_numpy_dtype())
+    return path 
 
 
 

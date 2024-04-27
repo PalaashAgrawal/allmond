@@ -1,5 +1,4 @@
-from fastai.data.all import noop
-from fastai.vision.all import * #placeholder to resolve all errors
+from fastai.text.all import * #this is a very lazy import. Basically imports everything
 from fastai.learner import *    
 
 
@@ -52,8 +51,10 @@ class LLMLearner(Learner):
     """
     Custom Learner Class specially designed for LLMs
     Features:
-    1. The Learner can save/load checkpoints with epoch/iteration values last logged. Useful for parallel distributed training, where hardware often fails abruptly. Learner will automatically resume training from last saved epoch AS WELL AS iteration. 
-    2. Added capability to resume from an Iteration (by default, only resume from epoch was supported)
+    1.  The Learner can save/load checkpoints with epoch/iteration values last logged. Useful for parallel distributed training, where hardware often fails abruptly. Learner will automatically resume training from last saved epoch AS WELL AS iteration. 
+    2.  Added capability to resume from an Iteration (by default, only resume from epoch was supported)
+    3.  slightly modified _with_events definition, that carries out after_{event_type} within the try block. 
+        The default definition causes error during distributed training. Particularly in the recorder class. See github issue link in _with_event definition
     """
     
     

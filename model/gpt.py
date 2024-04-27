@@ -280,7 +280,6 @@ class GPT(nn.Module):
 
 if __name__=='__main__':
     model = GPT(block_size=512, n_layer = 109)
-    # print(model.num_params)
     print(str(model))
     
         
