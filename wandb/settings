@@ -1,5 +1,0 @@
-[default]
-entity = palaashagrawal
-project = tinylm
-base_url = https://api.wandb.ai
-

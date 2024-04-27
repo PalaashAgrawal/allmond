@@ -5,12 +5,12 @@
 A concise template to train LLMs, using fast.ai and PyTorch. Only focus on the most important parts (data and model, and maybe training strategies), without writing, or scrolling through unnecessary code. 
 
 <p align="center">
-  <img src="assets/cover.webp" width="25%">
+  <img src="assets/cover.webp" width="35%">
 </p>
 
 
 #### Sidenote: What is Fast.ai?
-[Fast.ai](https://docs.fast.ai/) is a library built on top of PyTorch that provides high-level functions to train deep learning models quickly. Among many things, it provides a clean "learner" class, which handles training for you, given that your data and model are in standard formats (PyTorch dataloaders and nn Modules, respectively). This includes optimization, saving/loading model states, memory management, and even any custom functionality you need (in the form of callbacks). 
+- [Fast.ai](https://docs.fast.ai/) is a library built on top of PyTorch that provides high-level functions to train deep learning models quickly. Among many things, it provides a clean "learner" class, which handles training for you, given that your data and model are in standard formats (PyTorch dataloaders and nn Modules, respectively). This includes optimization, saving/loading model states, memory management, and even any custom functionality you need (in the form of callbacks). 
 Why Fast.ai? Its a beautiful library, super efficient, EXTREMELY(!!) flexible, and hides away the unnecessary nuances of training, the kind you dont see in any other library. So in most cases, you have to write no additional logic. Learning rate/momentum scheduling, mixed precision training, optimal learning rate finder, are just a few examples. 
 
 ## Whats special about this repo?
@@ -18,37 +18,36 @@ Fast.ai is a very general framework, works great! But it also expects the compon
 The problem is that LLM training runs don't always fit in the standard deep learning data structures that can be accomodated in a standard computer, simply because of the sheer scale. So in this repo, we build simple wrappers around functions to accomodate LLM training. Dataloaders access data using memory maps, for example. 
 
 ## This Repo's components in a nutshell
-<style>
-.column {
-  float: left;
-  width: 33%;
-}
-</style>
 
-<div class="column">
+
+<table>
+<tr>
+<td>
+
 
 - Data: downloaded from huggingface datasets
 - Tokenizer: Tiktoken 
 - Model: standard GPT architecture with Flash Attention
-</div>
 
-<div class="column">
+</td>
+<td>
 
 - Trainer function:  Learner class provided by fast.ai
 - Distributed Training: HuggingFace Accelerate (based on Torch DDP)
 - Distributed Backend: NCCL
-</div>
 
-<div class="column">
+</td>
+
+<td>
 
 - Progress Logging: Weights and Biases
 - Precision: bf16
 - Loss function: CrossEntropyLossFlat (pytorch)
-</div>
 
+</td>
 
-
-<div style="clear: both;"></div>
+</tr>
+</table>
 
 
 
@@ -103,9 +102,7 @@ The problem is that LLM training runs don't always fit in the standard deep lear
     
         `wandb init`
 
-        If you're setting up for the first time, you will have to paste an API key, which you will get by navigating to the [wandb website](https://wandb.ai/), under User Settings (on the top right corner).
-
-        Then, Create (or set) a project, where all the different training runs will be logged. Each project is like a folder, that organizes multiple training runs together, and separates them from a different project. 
+        If you're setting up for the first time, you will have to paste an API key, which you will get by navigating to the [wandb website](https://wandb.ai/), under User Settings (on the top right corner). Then, Create (or set) a project, where all the different training runs will be logged. Each project is like a folder, that organizes multiple training runs together, and separates them from a different project. 
     
     - Edit `train.py`
         Set `log_wandb` to `True`. 

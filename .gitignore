@@ -1,6 +1,6 @@
 # In[ ]:
 checkpoints/
-wandb/
+wandb
 __pycache__/
 *.out
 
