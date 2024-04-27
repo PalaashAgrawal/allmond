@@ -13,22 +13,18 @@ from fastai.callback.wandb import *
 import wandb
 
 
-# os.environ['NCCL_P2P_DISABLE']='1' #without this, NCCL (via accelerate.prepare) gets stuck during synchronization. 
 # os.environ['NCCL_P2P_LEVEL']='NVL'
 #You see an error like
 # RuntimeError: Exception occured in `DistributedTrainer` when calling event `before_fit`:  DDP expects same model across all ranks, but Rank 1 has 221 params, while rank 0 has inconsistent 0 params.
 #This seems like a NVIDIA problem due to the "asynchronous nature of CUDA kernels". Well then how can i make them synchronous? Asynchronous anyways does not look like a sound choice for parallel CUDA operations.
 #Try updating CUDA version later.
 
-
-
-#________________________________________wandb_____________________________________
+#________________________________________wandb____________________________________________
 log_wandb = False
 
 project = 'tinylm'
 dataset = "wikisimple"
 mode = 'scratch'
-
 # ________________________________________hyperparams and settings_________________________
 
 bs=20 #each GPU gets bs = 20, works good for a 24GB GPU
@@ -36,13 +32,13 @@ block_size = 512
 valid_sampler_size = 1000 #how many samples to use for validation. This is only used to check if validation loss is better than best_valid_loss, so that a checkpoint can be saved. Karpathy uses 200 random points
 validate_every = 1000 #1000 iterations, each iteration is bs*total_GPUs inputs
 
-#________________________________________Model_____________________________________
+#________________________________________Model_____________________________________________
 
 
 model = GPT(block_size=block_size)
 tokenizer = TiktokenTokenizer(from_model = "gpt2")
 
-#________________________________________data_____________________________________
+#________________________________________data______________________________________________
 
 # train_path, valid_path = rank0_first(lambda: download_dataset(dataset = dataset, encoder = tokenizer)) #check if data exists
 train_path, valid_path = download_dataset(dataset = dataset, encoder = tokenizer) #check if data exists
@@ -62,7 +58,7 @@ if not rank_distrib(): print(f'training {str(model)} on {train_dl.n} tokens') #p
 dls = DataLoaders(train_dl, valid_dl)
 dls.c = model.head.out_features
 
-#________________________________________Trainer_____________________________________
+#________________________________________Trainer____________________________________________
 
 check_and_save_model = save_checkpoints(dir = Path('checkpoints'), 
                                                 model_name = 'gpt', 
@@ -84,8 +80,6 @@ learn = LLMLearner(dls,
                 ).to_bf16()
 
 #check and load previous checkpoint. Doesnt make sense to do it within the callback, because all callbacks are initialized in the Learner before they are even called
-learn.check_and_load_learner(check_and_save_model.checkpoint_name, device = rank_distrib() if num_distrib() else None)
+learn.check_and_load_learner(check_and_save_model.checkpoint_name, device = rank_distrib() if num_distrib() else None) #initialize each learner to respective device
 
-
-with learn.distrib_ctx():
-    learn.fit_one_cycle(1, 1e-4)
+with learn.distrib_ctx(): learn.fit_one_cycle(1, 1e-4)

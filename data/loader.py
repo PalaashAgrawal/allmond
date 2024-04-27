@@ -51,7 +51,7 @@ class memmapDL(DataLoader):
         """
         We almost sample almost all elements. 
         If in each random iteration, i were to choose only one element, I would encounter only about N(1-1/e) = 0.63N items uniquely (about 63% of the dataset)
-        But since in each iteration, I sample bs items, the total elements encountered goes significantly up. We end up covering almost the entire dataset
+        But since in each iteration, I sample block_size items, the total elements encountered goes significantly up. We end up covering almost the entire dataset
        
         ACCORDING TO GPT4
         import numpy as np
@@ -59,7 +59,7 @@ class memmapDL(DataLoader):
         # Constants for sequential sampling
         M = 9e9  # 9 billion elements (approx) #number of draws
         N = 9e9  # 9 billion times (approx) #dataset size
-        K = 20   # 20 items each draw #batch size
+        K = 512   # 512 items each draw #batch size
 
         # Assume the dataset does not wrap around
         max_start_index = M - K + 1

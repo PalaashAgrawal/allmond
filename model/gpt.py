@@ -151,7 +151,7 @@ class GPT(nn.Module):
         
         
     @torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False)
-    def forward(self, idx, targets = None):
+    def forward(self, idx):
         _,t = idx.shape
         assert t<=self.block_size, f'Cannot forward, model block size is exhausted. Model block size is {self.block_size}, but input sequence length is {t}.'
         pos = torch.arange(t, dtype = torch.long, device = idx.device) #shape (t,)
@@ -162,21 +162,6 @@ class GPT(nn.Module):
         
         for block in self.layers: x = block(x)
         x = self.layernorm_final(x)
-        
-        
-        
-        # if targets is not None:
-        #     logits = self.head(x)
-        #     loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
-        # else:
-        #     #during inference, we don't have targets. We just return the logits.
-        #     logits = self.head(x[:, [-1], :]) #note: using list[-1] to preserve the time dimension. out shape (b,1,vocab_size)
-        #     loss = None
-            
-        # return logits, loss
-    
-    
-    
     
         return self.head(x)
             
@@ -263,6 +248,7 @@ class GPT(nn.Module):
     
     
     def __str__(self): 
+        f'get model name along with number of parameters in millions/billions'
         def _format_number(num):
             if num >= 1_000_000_000:
                 return f"{num / 1_000_000_000:.1f}B"
