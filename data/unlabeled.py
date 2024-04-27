@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 
-from config import config_dict
+from .config import config_dict
 
 
 

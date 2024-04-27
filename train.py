@@ -13,7 +13,6 @@ from fastai.callback.wandb import *
 import wandb
 
 
-
 # os.environ['NCCL_P2P_DISABLE']='1' #without this, NCCL (via accelerate.prepare) gets stuck during synchronization. 
 # os.environ['NCCL_P2P_LEVEL']='NVL'
 #You see an error like
@@ -32,8 +31,6 @@ mode = 'scratch'
 
 # ________________________________________hyperparams and settings_________________________
 
-
-
 bs=20 #each GPU gets bs = 20, works good for a 24GB GPU
 block_size = 512
 valid_sampler_size = 1000 #how many samples to use for validation. This is only used to check if validation loss is better than best_valid_loss, so that a checkpoint can be saved. Karpathy uses 200 random points
@@ -47,7 +44,7 @@ tokenizer = TiktokenTokenizer(from_model = "gpt2")
 
 #________________________________________data_____________________________________
 
-download_dataset(dataset = dataset, encoder = tokenizer) #check if data exists
+rank0_first(lambda: download_dataset(dataset = dataset, encoder = tokenizer)) #check if data exists
 
 train_dl = dataloader(WikipediaSimpleConfig().default_cache_dir/'train.bin', bs = bs, block_size=block_size, 
                       dtype=tokenizer._get_numpy_dtype())
