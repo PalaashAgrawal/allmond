@@ -1,5 +1,3 @@
-# from fastcore.all import *
-# from fastai.callback.all import *
 from fastai.vision.all import * #placeholder to resolve all errors
 from fastai.learner import *
 
@@ -50,7 +48,7 @@ def load_model(file, model, opt, with_opt=True, with_iter = True, device=None, s
         
         
         
-class customLearner(Learner):
+class LLMLearner(Learner):
     """
     The goal of this learner is to
     A. learner should automatically resume training using a checkpoint file
@@ -86,14 +84,14 @@ class customLearner(Learner):
             self._with_events(self._do_fit, 'fit', CancelFitException, self._end_cleanup)
 
     
-    def _with_events(self, f, event_type, ex, final=noop):
-        """
-        PAg: self(f'after_{event_type}') moved inside try block. 
-        I opened an issue regarding this, for more deets: https://github.com/fastai/fastai/issues/4030
-        """ 
-        try: self(f'before_{event_type}');  f() ; self(f'after_{event_type}')
-        except ex: self(f'after_cancel_{event_type}')
-        final()
+    # def _with_events(self, f, event_type, ex, final=noop):
+    #     """
+    #     PAg: self(f'after_{event_type}') moved inside try block. 
+    #     I opened an issue regarding this, for more deets: https://github.com/fastai/fastai/issues/4030
+    #     """ 
+    #     try: self(f'before_{event_type}');  f() ; self(f'after_{event_type}')
+    #     except ex: self(f'after_cancel_{event_type}')
+    #     final()
     
     
     #PAg: not for PR
@@ -162,6 +160,7 @@ class SkipToIter(Callback):
         self._skip_to_iter = iter
         
     def before_epoch(self):
+        
         if self.epoch < self._skip_to_epoch:
             raise CancelEpochException
         

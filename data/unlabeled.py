@@ -51,7 +51,9 @@ class unlabeledDataset():
                                             )
                                             
         if getattr(self.config, 'split_into_train_val', True): 
+            self.split_pct = getattr(self.config, 'split_pct', None)
             self.train, self.val = self.split(val_name = getattr(self.config, 'split_name', 'val')) #by default, split the dataset into train and val sets
+            
         
         
     def split(self, pct = 0.9995, val_name = 'val'):
@@ -64,6 +66,9 @@ class unlabeledDataset():
         datasets.Dataset: The training set.
         datasets.Dataset: The validation set.
         '''
+        
+        
+        pct = getattr(self, 'split_pct', None) or pct
         
         self.val_name = val_name
         

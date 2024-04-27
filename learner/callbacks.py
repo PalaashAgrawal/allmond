@@ -2,7 +2,7 @@ from fastai.text.all import *
 from fastai.distributed import *
 
 
-class save_and_load_model_checkpoints(Callback):
+class save_checkpoints(Callback):
 
     """
     Callback to save model checkpoints during training.

@@ -14,6 +14,7 @@ class WikipediaSimpleConfig():
     split_into_train_val = True
     split_name = 'val' #Optional
     kwargs = {'name':'20220301.simple'}
+    split_pct = 0.99
     
     
     
