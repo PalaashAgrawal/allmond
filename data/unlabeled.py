@@ -4,6 +4,11 @@ import numpy as np
 import os
 from pathlib import Path
 
+
+from config import config_dict
+
+
+
 class unlabeledDataset():
     '''
     given huggingface dataset name, download the dataset using the datasets library
@@ -53,7 +58,7 @@ class unlabeledDataset():
         if getattr(self.config, 'split_into_train_val', True): 
             self.split_pct = getattr(self.config, 'split_pct', None)
             self.train, self.val = self.split(val_name = getattr(self.config, 'split_name', 'val')) #by default, split the dataset into train and val sets
-            
+        
         
         
     def split(self, pct = 0.9995, val_name = 'val'):
@@ -284,4 +289,20 @@ class TiktokenTokenizer():
         # If no suitable type found, raise an exception (unlikely with uint64)
         raise ValueError("Value is too large for available data types.")
             
+
+
+
+def download_dataset(dataset:str, encoder = TiktokenTokenizer(), force_redownload = False):
+    f'download dataset in tokenized form using encoder'
+    f'TODO: return paths of files directly. This allows us to handle ambiguity'
+    
+    assert dataset in config_dict, f"{dataset} is not supported. Available datasets: {config_dict.keys()}"
+    dataset_config = config_dict[dataset]()
+    n_procs = max(1, int(os.cpu_count()-2)) #leave atleast 2 cores for other processes
+    ds = unlabeledDataset(dataset_config, n_procs, force_redownload=force_redownload)
+    ds.tokenize(encoder.tokenize_dataset, save_tokens_to_disk = True, dtype = encoder._get_numpy_dtype())
+
+
+
+    
     

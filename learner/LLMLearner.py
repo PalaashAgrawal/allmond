@@ -50,20 +50,16 @@ def load_model(file, model, opt, with_opt=True, with_iter = True, device=None, s
         
 class LLMLearner(Learner):
     """
-    The goal of this learner is to
-    A. learner should automatically resume training using a checkpoint file
-    B. 
-    
-    1. Save training checkpoints ALONG WITH epoch and iteration value. (save and save_model functions)
-        a. in the fit function, IF THE USER WANTS TO OVERRIDE SAVED VALUES, they can specify value, but then model params will be different
-        b. SaveModelCallback args should be modified to incorporate iter and epoch values as well)
-    2. Similarly loading should be compatible.  (load and load_model functions)
-    3. Custom SkipToIter(Callback) (akin to SkiptoEpoch)
+    Custom Learner Class specially designed for LLMs
+    Features:
+    1. The Learner can save/load checkpoints with epoch/iteration values last logged. Useful for parallel distributed training, where hardware often fails abruptly. Learner will automatically resume training from last saved epoch AS WELL AS iteration. 
+    2. Added capability to resume from an Iteration (by default, only resume from epoch was supported)
     """
     
     
     
     def fit(self, n_epoch, lr=None, wd=None, cbs=None, reset_opt=False, start_epoch=0, start_iter = 0):
+        'start_epoch and start_iter override values loaded from checkpoints.'
         
         if hasattr(self, 'resumeIter'):
             start_epoch  = start_epoch or self.resumeIter['epoch']
@@ -83,16 +79,7 @@ class LLMLearner(Learner):
             
             self._with_events(self._do_fit, 'fit', CancelFitException, self._end_cleanup)
 
-    
-    # def _with_events(self, f, event_type, ex, final=noop):
-    #     """
-    #     PAg: self(f'after_{event_type}') moved inside try block. 
-    #     I opened an issue regarding this, for more deets: https://github.com/fastai/fastai/issues/4030
-    #     """ 
-    #     try: self(f'before_{event_type}');  f() ; self(f'after_{event_type}')
-    #     except ex: self(f'after_cancel_{event_type}')
-    #     final()
-    
+
     
     #PAg: not for PR
     def check_and_load_learner(self, file, device = 'cuda'):
@@ -160,10 +147,14 @@ class SkipToIter(Callback):
         self._skip_to_iter = iter
         
     def before_epoch(self):
-        
         if self.epoch < self._skip_to_epoch:
             raise CancelEpochException
         
     def before_batch(self):
+        self.learn.cancel_train = False
         if self.iter < self._skip_to_iter:
             raise CancelBatchException
+    
+    def after_cancel_batch(self):
+        f'for the recorder class to skip loss accumulation'
+        self.learn.cancel_train = True

@@ -1,12 +1,11 @@
-from data.unlabeled import TiktokenTokenizer
+from data.unlabeled import TiktokenTokenizer, download_dataset
 from data.config import OpenWebTextConfig, WikipediaSimpleConfig
 from data.loader import dataloader, customDistributedDL
 
 from model.gpt import GPT
-# from model.callbacks import save_and_load_model_checkpoints
-# from model.customLearner import customLearner
+
 from learner.callbacks import save_checkpoints
-from learner.learner import LLMLearner
+from learner.LLMLearner import LLMLearner
 
 from fastai.text.all import *
 from fastai.distributed import *
@@ -28,14 +27,14 @@ import wandb
 log_wandb = False
 
 project = 'tinylm'
-id = "simplewiki"
+dataset = "wikisimple"
 mode = 'scratch'
 
 # ________________________________________hyperparams and settings_________________________
 
 
 
-bs=20 #each GPU gets bs = 20
+bs=20 #each GPU gets bs = 20, works good for a 24GB GPU
 block_size = 512
 valid_sampler_size = 1000 #how many samples to use for validation. This is only used to check if validation loss is better than best_valid_loss, so that a checkpoint can be saved. Karpathy uses 200 random points
 validate_every = 1000 #1000 iterations, each iteration is bs*total_GPUs inputs
@@ -46,9 +45,9 @@ validate_every = 1000 #1000 iterations, each iteration is bs*total_GPUs inputs
 model = GPT(block_size=block_size)
 tokenizer = TiktokenTokenizer(from_model = "gpt2")
 
-
 #________________________________________data_____________________________________
 
+download_dataset(dataset = dataset, encoder = tokenizer) #check if data exists
 
 train_dl = dataloader(WikipediaSimpleConfig().default_cache_dir/'train.bin', bs = bs, block_size=block_size, 
                       dtype=tokenizer._get_numpy_dtype())
@@ -77,7 +76,7 @@ if log_wandb:
     wandb.init(project=project, name = f"{id}_{str(model)}_{mode}")
 
 
-learn = customLearner(dls, 
+learn = LLMLearner(dls, 
                 model, 
                 loss_func=CrossEntropyLossFlat(), 
                 metrics=[accuracy, Perplexity()],

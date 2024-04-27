@@ -16,5 +16,10 @@ class WikipediaSimpleConfig():
     kwargs = {'name':'20220301.simple'}
     split_pct = 0.99
     
+
+
+config_dict = {'openwebtext':OpenWebTextConfig,
+           'wikisimple': WikipediaSimpleConfig}
+    
     
     
