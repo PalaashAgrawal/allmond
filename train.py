@@ -20,7 +20,7 @@ import wandb
 #Try updating CUDA version later.
 
 #________________________________________wandb____________________________________________
-log_wandb = False
+log_wandb = False #set to False if you dont want to log progress to W&B
 
 project = 'tinylm'
 dataset = "wikisimple"

@@ -35,12 +35,13 @@ Without going into much details here to keep this README concise, see [here](/.d
 <td>
 
 
-- Distributed Training: HuggingFace Accelerate (based on Torch DDP)
+- Distributed Training: HuggingFace Accelerate
 - Distributed Backend: NCCL
 - Progress Logging: Weights and Biases
 - Precision: bf16
 
 </td>
+
 
 
 </tr>
@@ -76,11 +77,8 @@ Without going into much details here to keep this README concise, see [here](/.d
 
 ### But if you have multiple GPUs... (Distributed Training)
 
-- First you need to set up configurations for distributed training. 
-
-    `accelerate config`
-
-    Most defaults work well. Just set up  "distributed_type" (multi-gpu/multi-node?),  "num_machines",  "num_processes" (accross all the machines combined), and "machine_rank". An example of the values that may be suitable for your config is shown in `learner/accelerate_config_example.yml`
+- We use Huggingface Accelerate to carry out distributed training (which itself is built on top of PyTorch DDP). 
+- Before you can launch distributed training using accelerate, you need to create certain configurations that tell acclerate the nature of distributed training (e.g., whether the training is distributed across multiple GPUs in a single node, or multiple nodes are involved, which machine is the main machine, etc). Navigate to [this](.docs/accelerate.md) document for detauls
 
 
 - Next, simply run
@@ -91,15 +89,11 @@ Without going into much details here to keep this README concise, see [here](/.d
 
     `nohup accelerate launch train.py &`
 
-### Optional (but very useful): Log progress to W&B 
+### Optional: Log progress to W&B 
 
 - [W&B](https://wandb.ai/) logging
 
-    -  Before logging any info to W&B (Weights and Biases), you need to setup a config file. This is very simple. 
-    
-        `wandb init`
-
-        If you're setting up for the first time, you will have to paste an API key, which you will get by navigating to the [wandb website](https://wandb.ai/), under User Settings (on the top right corner). Then, Create (or set) a project, where all the different training runs will be logged. Each project is like a folder, that organizes multiple training runs together, and separates them from a different project. 
+    -  There is a very short process you need to first carry out to setup W&B your system. Navigate to [this](.docs/wandb.md) document for deets.
     
     - Edit `train.py`
         Set `log_wandb` to `True`. 
@@ -123,10 +117,11 @@ See `data/README.md` to see guidelines of downloading custom datasets from huggi
 
 
 ## TODO
-1. Model Distribution across GPUs?
+1. Model parallelization across GPUs (instead of data parallelization) ?
 2. Instruct Finetuning of model
 3. Evaluation on benchmarks
 4. Combining multiple datasets for training?
+5. Quantization
 
 ## Known Issues
 1. CUDA version 12.3, and Driver Version: 525.x doesn't seem to work well with the NCCL framework. Apparantly, data can't be synchronized between GPUs via P2P. 
