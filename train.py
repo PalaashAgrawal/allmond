@@ -40,8 +40,7 @@ tokenizer = TiktokenTokenizer(from_model = "gpt2")
 
 #________________________________________data______________________________________________
 
-# train_path, valid_path = rank0_first(lambda: download_dataset(dataset = dataset, encoder = tokenizer)) #check if data exists
-train_path, valid_path = download_dataset(dataset = dataset, encoder = tokenizer) #check if data exists
+train_path, valid_path = rank0_first(lambda: download_dataset(dataset = dataset, encoder = tokenizer)) #check if data exists, download only for rank0 GPU. 
 
 train_dl = memmapDL(train_path, bs = bs, block_size=block_size, 
                       dtype=tokenizer._get_numpy_dtype())
