@@ -1,5 +1,4 @@
 from data.unlabeled import TiktokenTokenizer, download_dataset
-from data.config import OpenWebTextConfig, WikipediaSimpleConfig
 from data.loader import memmapDL, distributedMemmapDL
 
 from model.gpt import GPT
@@ -14,10 +13,10 @@ import wandb
 
 
 # os.environ['NCCL_P2P_LEVEL']='NVL'
-#You see an error like
+#If you see  see an error like this after waiting for a long time. 
 # RuntimeError: Exception occured in `DistributedTrainer` when calling event `before_fit`:  DDP expects same model across all ranks, but Rank 1 has 221 params, while rank 0 has inconsistent 0 params.
 #This seems like a NVIDIA problem due to the "asynchronous nature of CUDA kernels". Well then how can i make them synchronous? Asynchronous anyways does not look like a sound choice for parallel CUDA operations.
-#Try updating CUDA version later.
+#Try uncommenting the above line
 
 #________________________________________wandb____________________________________________
 log_wandb = False #set to False if you dont want to log progress to W&B
