@@ -4,7 +4,7 @@ First you need to set up configurations for distributed training. In your termin
 
 `accelerate config`
 
-This will create a yaml configuration file in a default location. 
+This will create a yaml configuration file in a default location (such as `~/.cache/huggingface/accelerate/default_config.yml`)
 
 Most defaults work well. Just set up  "distributed_type" (multi-gpu/multi-node?),  "num_machines",  "num_processes" (accross all the machines combined), and "machine_rank". An example of the yaml values that may be suitable for your config is shown below. This particular example is meant for multi-GPU training, within a single node.
 

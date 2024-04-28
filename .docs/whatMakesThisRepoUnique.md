@@ -11,3 +11,7 @@ This repo is a very _clean pythonic implementation_ of LLM pipelines.
         
         - It is highly flexible as well. As you will notice, we add various kinds of custom functionalities, such as evaluating on the validation dataset at regular intervals during training. We also write a few wrappers around fast.ai functions to incorporate LLM training efficiently. This is needed because 
         fast.ai expects the components to be in a standard format. The problem with LLM training is that the underlying components  don't always fit the standard pytorch data structure format that can be accomodated in a typical computer, simply because of the sheer scale. So in this repo, we build simple wrappers around functions to accomodate LLM training. Dataloaders access data using memory maps instead of a Dataset class object, for example. 
+
+
+
+In short, we hide away implementation details in scripts, and expose hyperparameters that actually affect training (data format, model architectures, batch_size, etc etc). On the contrary, most repos, expose unnecessary implementation details (like the training process (iterating through dataloaders, forwarding through model, calculating loss, etc)), and hide away important hyperparameters in config files. 
