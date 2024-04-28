@@ -27,23 +27,21 @@ Without going into much details here to keep this README concise, see [here](/.d
 - Data source: huggingface datasets
 - Tokenizer: Tiktoken 
 - Model: standard GPT architecture with Flash Attention
-
-</td>
-<td>
-
 - Trainer function:  Learner class provided by fast.ai
-- Distributed Training: HuggingFace Accelerate (based on Torch DDP)
-- Distributed Backend: NCCL
-
-</td>
-
-<td>
-
-- Progress Logging: Weights and Biases
-- Precision: bf16
 - Loss function: CrossEntropyLossFlat (pytorch)
 
+
 </td>
+<td>
+
+
+- Distributed Training: HuggingFace Accelerate (based on Torch DDP)
+- Distributed Backend: NCCL
+- Progress Logging: Weights and Biases
+- Precision: bf16
+
+</td>
+
 
 </tr>
 </table>
