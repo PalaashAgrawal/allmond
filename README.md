@@ -9,13 +9,12 @@ A concise template to train LLMs, using fast.ai and PyTorch. Only focus on the m
 </p>
 
 
-#### Sidenote: What is Fast.ai?
-- [Fast.ai](https://docs.fast.ai/) is a library built on top of PyTorch that provides high-level functions to train deep learning models quickly. Among many things, it provides a clean "learner" class, which handles training for you, given that your data and model are in standard formats (PyTorch dataloaders and nn Modules, respectively). This includes optimization, saving/loading model states, memory management, and even any custom functionality you need (in the form of callbacks). 
-Why Fast.ai? Its a beautiful library, super efficient, EXTREMELY(!!) flexible, and hides away the unnecessary nuances of training, the kind you dont see in any other library. So in most cases, you have to write no additional logic. Learning rate/momentum scheduling, mixed precision training, optimal learning rate finder, are just a few examples. 
-
 ## Whats special about this repo?
-Fast.ai is a very general framework, works great! But it also expects the components to be in a standard format. 
-The problem is that LLM training runs don't always fit in the standard deep learning data structures that can be accomodated in a standard computer, simply because of the sheer scale. So in this repo, we build simple wrappers around functions to accomodate LLM training. Dataloaders access data using memory maps, for example. 
+This repo is a very _clean pythonic implementation_ of LLM pipelines.
+- _Clean_ means that different components are clearly separated, and initialized using intuitive function arguments. 
+- _Clean_ also means that training scripts are very minimal, which is a result of high level abstractions. This ensures you don't have to scroll through unnecessary code. 
+
+Without going into much details here to keep this README concise, see [here](/.docs/whatMakesThisRepoUnique.md) for more details and design choice justifications. 
 
 ## This Repo's components in a nutshell
 
@@ -25,7 +24,7 @@ The problem is that LLM training runs don't always fit in the standard deep lear
 <td>
 
 
-- Data: downloaded from huggingface datasets
+- Data source: huggingface datasets
 - Tokenizer: Tiktoken 
 - Model: standard GPT architecture with Flash Attention
 
@@ -94,7 +93,7 @@ The problem is that LLM training runs don't always fit in the standard deep lear
 
     `nohup accelerate launch train.py &`
 
-### Optional (but very useful): Log process to W&B 
+### Optional (but very useful): Log progress to W&B 
 
 - [W&B](https://wandb.ai/) logging
 
@@ -150,3 +149,17 @@ If you find this repository useful in your research or work, please consider cit
   howpublished = {\url{https://github.com/PalaashAgrawal/fastllm}},
 }
 ```
+
+
+
+## Star History
+<div style="display: flex; justify-content: center;">
+  <a href="https://star-history.com/#palaashagrawal/fastllm&Date">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=palaashagrawal/fastllm&type=Date&theme=dark" />
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=palaashagrawal/fastllm&type=Date" />
+      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=palaashagrawal/fastllm&type=Date" style="width: 75%;" />
+    </picture>
+  </a>
+</div>
+
