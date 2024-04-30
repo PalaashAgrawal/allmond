@@ -1,7 +1,7 @@
 # In[ ]:
-checkpoints/
+checkpoints
 wandb
-__pycache__/
+__pycache__
 *.out
 
 

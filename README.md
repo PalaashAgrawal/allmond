@@ -1,14 +1,16 @@
-# FastLLM
-## LLM Training Made Quick and Easy
+# aLLMond
+
+## LLM Training Made Quick, Flexible and Easy
+
 
 
 A concise framework to train LLMs quickly. You only need focus on the most important parts (data and model, and maybe training strategies), without writing, or scrolling through unnecessary code. 
 
 
-
 <p align="center">
   <img src=".assets/cover.webp" width="35%">
 </p>
+
 
 
 ## Whats special about this repo?
@@ -138,13 +140,13 @@ See `data/README.md` to see guidelines of downloading custom datasets from huggi
 ## Cite
 If you find this repository useful in your research or work, please consider citing it:
 ```
-@misc{fastllm,
-  title={Fastllm: LLM Training Made Quick and Easy},
+@misc{allmond,
+  title={aLLMond: LLM Training Made Quick and Easy},
   author={Palaash Agrawal},
   year = {2024},
   publisher = {GitHub},
   journal = {GitHub repository},
-  howpublished = {\url{https://github.com/PalaashAgrawal/fastllm}},
+  howpublished = {\url{https://github.com/PalaashAgrawal/allmond}},
 }
 ```
 
