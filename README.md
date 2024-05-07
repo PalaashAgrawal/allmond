@@ -122,11 +122,14 @@ See `data/README.md` to see guidelines of downloading custom datasets from huggi
 
 
 ## TODO
-1. Model parallelization across GPUs (instead of data parallelization) ?
+1. ~~Model parallelization across GPUs (instead of data parallelization) ?~~
 2. Instruct Finetuning of model
 3. Evaluation on benchmarks
 4. Combining multiple datasets for training?
-5. Quantization
+5. ~~Quantization~~
+
+6. FSDP (instead of 1.)
+7. QLoRA (instead of 5. Quantization during training isnt without LoRA doesnt make sense, because gradients will be zero)
 
 ## Known Issues
 1. CUDA version 12.3, and/or Driver Version: 525.x doesn't seem to work well with the NCCL framework. Apparantly, data can't be synchronized between GPUs via P2P. 
