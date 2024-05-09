@@ -83,7 +83,12 @@ Without going into much details here to keep this README concise, see [here](/.d
 ### But if you have multiple GPUs... (Distributed Training)
 
 - We use Huggingface Accelerate to carry out distributed training (which itself is built on top of PyTorch DDP). 
-- Before you can launch distributed training using accelerate, you need to create certain configurations that tell acclerate the nature of distributed training (e.g., whether the training is distributed across multiple GPUs in a single node, or multiple nodes are involved, which machine is the main machine, etc). Navigate to [this](.docs/accelerate.md) document for detauls
+- Before you can launch distributed training using accelerate, you need to create certain configurations that tell acclerate the nature of distributed training For example, 
+  - whether the training is distributed across multiple GPUs in a single node, or multiple nodes are involved, 
+  - which machine is the main machine, 
+  - whether you want DDP or FSDP based distributed training, etc. 
+
+Navigate to [this](.docs/accelerate.md) document for details.
 
 
 - Next, simply run
