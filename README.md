@@ -124,17 +124,9 @@ See `data/README.md` to see guidelines of downloading custom datasets from huggi
 
 - If you wish to introduce changes to the training process itself (including optimization strategy, grad accumulation, etc etc), you need to do that using the Learner Class. Visit [fast.ai documentation](https://docs.fast.ai/) to explore this. For people unfamiliar with fast.ai, just open a github issue, I'll try to look into it and incorporate it as a training option. 
 
-
-
 ## TODO
-1. ~~Model parallelization across GPUs (instead of data parallelization) ?~~
-2. Instruct Finetuning of model
-3. Evaluation on benchmarks
-4. Combining multiple datasets for training?
-5. ~~Quantization~~
+See [this document](.docs/TODO.md)
 
-6. FSDP (instead of 1.)
-7. QLoRA (instead of 5. Quantization during training isnt without LoRA doesnt make sense, because gradients will be zero)
 
 ## Known Issues
 1. CUDA version 12.3, and/or Driver Version: 525.x doesn't seem to work well with the NCCL framework. Apparantly, data can't be synchronized between GPUs via P2P. 
