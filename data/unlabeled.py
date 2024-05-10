@@ -37,30 +37,35 @@ class unlabeledDataset():
         """
         
         # Load the dataset
-        super().__init__()
+        # super().__init__()
         
         self.config = datasetConfig
         self.n_proc = n_proc
-        self.cache_dir = Path(cache_dir or datasetConfig.default_cache_dir)
+        self.cache_dir = Path(cache_dir or datasetConfig.default_cache_dir).expanduser()
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        
         self.force_redownload = force_redownload
         self.splits = ['train'] + [getattr(self.config, 'split_name', 'val')] if getattr(self.config, 'split_into_train_val', True) else []
         
         
         
-        if self.cache_dir is not None: 
-            if not self.force_redownload and self.cache_dir.exists(): return 
-            
-            self.cache_dir.mkdir(parents=True, exist_ok=True)
+        try: 
                 
         #Assuming that datasets always returns "train" and "test"
-        self.dataset = datasets.load_dataset(
-                                            self.config.dataset_name,
-                                            num_proc=self.n_proc,
-                                            trust_remote_code=True,
-                                            cache_dir=self.cache_dir,
-                                            download_mode = 'force_redownload' if self.force_redownload else 'reuse_cache_if_exists',
-                                            **getattr(self.config, 'kwargs',{}),
-                                            )
+            self.dataset = datasets.load_dataset(
+                                                self.config.dataset_name,
+                                                num_proc=self.n_proc,
+                                                trust_remote_code=True,
+                                                cache_dir=self.cache_dir,
+                                                download_mode = 'force_redownload' if self.force_redownload else 'reuse_cache_if_exists',
+                                                **getattr(self.config, 'kwargs',{}),
+                                                )
+        except Exception as e:
+            raise RuntimeError(f"Failed to load dataset: {e}")
+            
+        if self.cache_dir is not None: 
+            if not self.force_redownload and self.cache_dir.exists(): return 
+            # self.cache_dir.mkdir(parents=True, exist_ok=True)
                                             
         if getattr(self.config, 'split_into_train_val', True): 
             self.split_pct = getattr(self.config, 'split_pct', None)

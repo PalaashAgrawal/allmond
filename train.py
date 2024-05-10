@@ -21,11 +21,11 @@ import wandb
 log_wandb = False #set to False if you dont want to log progress to W&B
 
 project = 'tinylm'
-dataset = "wikisimple"
+dataset = "wiki-en"
 mode = 'scratch'
 # ________________________________________hyperparams and settings_________________________
 
-bs=2 #each GPU gets bs = 20, works good for a 24GB GPU
+bs=20 #each GPU gets bs = 20, works good for a 24GB GPU
 block_size = 512
 valid_sampler_size = 1000 #how many samples to use for validation. This is only used to check if validation loss is better than best_valid_loss, so that a checkpoint can be saved. Karpathy uses 200 random points
 validate_every = 1000 #1000 iterations, each iteration is bs*total_GPUs inputs
@@ -39,7 +39,6 @@ tokenizer = TiktokenTokenizer(from_model = "gpt2")
 #________________________________________data______________________________________________
 
 train_path, valid_path = rank0_first(lambda: download_dataset(dataset = dataset, encoder = tokenizer)) #check if data exists, download only for rank0 GPU. 
-
 train_dl = memmapDL(train_path, bs = bs, block_size=block_size, 
                       dtype=tokenizer._get_numpy_dtype())
 valid_dl = memmapDL(valid_path, bs = bs, block_size=block_size, 
@@ -78,6 +77,6 @@ learn = LLMLearner(dls,
                 ).to_bf16()
 
 #check and load previous checkpoint. Doesnt make sense to do it within the callback, because all callbacks are initialized in the Learner before they are even called
-learn.check_and_load_learner(check_and_save_model.checkpoint_name, device = rank_distrib() if num_distrib() else None) #initialize each learner to respective device
+# learn.check_and_load_learner(check_and_save_model.checkpoint_name, device = rank_distrib() if num_distrib() else None) #initialize each learner to respective device
 
 with learn.distrib_ctx(): learn.fit_one_cycle(1, 1e-4)
