@@ -2,108 +2,52 @@ from torch import nn
 import torch
 import torch.nn.functional as F
 
+from .transformer_components import TransformerBlock
+from .huggingface_wrappers import HF_base
 
-
-class MultiHeadSelfAttention(nn.Module):
-    'Why the fuck is self attention not defined in Pytorch API??'
     
-    def __init__(self, embed_dim, num_heads, dropout=0.0, bias=True, add_bias_kv=False, add_zero_attn=False, kdim=None, vdim=None, 
-                 batch_first=True, #by default is TRUE 
-                 device=None, dtype=None,
-                 is_causal = True,
-                 block_size = None):
+class BaseModel:
+    def __str__(self): 
+        f'get model name along with number of parameters in millions/billions'
+        def _format_number(num):
+            if num >= 1_000_000_000:
+                return f"{num / 1_000_000_000:.1f}B"
+            elif num >= 1_000_000:
+                return f"{num / 1_000_000:.1f}M"
+            else:
+                return str(num)
         
-         
-        
-        super().__init__()
-        
-        self.k = nn.Linear(embed_dim, embed_dim)
-        self.q = nn.Linear(embed_dim, embed_dim)
-        self.v = nn.Linear(embed_dim, embed_dim)
-        
-        self.is_causal = is_causal
-        
-        self.multiheadattn = nn.MultiheadAttention( embed_dim, num_heads, dropout=dropout, bias=bias, add_bias_kv=add_bias_kv, 
-                                                    add_zero_attn=add_zero_attn, kdim=kdim, vdim=vdim, 
-                                                    batch_first=batch_first, #by default is TRUE 
-                                                    device=device,  dtype=dtype)
-        
-        if self.is_causal:
+        model_name = self.model_name if hasattr(self,'model_name') else 'GPT'
             
-            assert block_size, 'block_size must be provided for causal attention'
-            assert batch_first, 'Causal attention is only implemented for batch_first = True'
-            self.register_buffer('causal_mask', torch.tril(torch.ones(block_size, block_size)))
-            
-        
-    def forward(self, x):
-        attn_mask = self.causal_mask if self.is_causal else None
-        # print(attn_mask)
-        
-        k,q,v = self.k(x), self.q(x), self.v(x) #B, T, n_embd
-        return self.multiheadattn(q, k, v, attn_mask = attn_mask)
+        return f'{model_name}-{_format_number(self.num_params)}'
     
-        
-        
-        
-        
+    @property
+    def num_params(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
     
-class MLP(nn.Module):
-    def __init__(self, n_embd: int, 
-                 n_hidden: int = None,
-                 dropout: float = 0.0, 
-                 bias = False):
-        
+    def get_num_params(self, non_embedding=True):
         """
-        Initializes the GPT2 model.
-        
-        Args:
-            n_embd (int): The size of the embedding layer.
-            n_hidden (int, optional): The size of the hidden layer. Defaults to None. If None, defaults to n_embd * 4. (According to the GPT-2 paper.)
-            dropout (float, optional): The dropout rate. Defaults to 0.0. 
-            bias (bool, optional): Whether to include bias terms. Defaults to False. bias = False is a bit better and faster.
+        Return the number of parameters in the model.
+        For non-embedding count (default), the position embeddings get subtracted.
+        The token embeddings would too, except due to the parameter sharing these
+        params are actually used as weights in the final layer, so we include them.
         """
-            
-        super().__init__()
-        if n_hidden is None: n_hidden = n_embd * 4
+        n_params = self.num_params
+        assert hasattr(self, 'wpe') and isinstance(self.wpe, nn.Embedding), f'Positional Encoding Embedding (wpe) not defined in the model. Define `self.wpe` as a nn.Embedding'
+        assert hasattr(self, 'wte') and isinstance(self.wte, nn.Embedding), f'Token Embedding layer (wte) not defined in the model. Define `self.wte` as a nn.Embedding'
         
-        self.residual_fc = nn.Linear(n_embd, n_hidden, bias = bias)
-        self.gelu = nn.GELU()
-        self.residual_projection = nn.Linear(n_hidden, n_embd, bias = bias)
-        self.dropout = nn.Dropout(dropout)
+        if non_embedding: n_params-=self.wpe.weight.numel()
+        params_excl_embeddings = n_params - self.wte.weight.numel()
         
-    def forward(self, x):
+        print(f'Number of parameters: {n_params/1e6:.2f}M. Number of parameters (excluding embeddings): {params_excl_embeddings/1e6:.2f}M. Embeddings occupy {params_excl_embeddings/n_params*100:.2f}% of the total parameter count. ')
         
-        x = self.residual_fc(x)
-        x = self.gelu(x)
-        x = self.residual_projection(x)
-        x = self.dropout(x)
-        return x
-
-
-class TransformerBlock(nn.Module):
-    f'Implementation of the (Decoder only) block of the transformer'
-    def __init__(self, n_embd, n_heads, dropout = 0.0, bias = False, apply_causal_mask = True, block_size = None):
-        super().__init__()
-        self.layernorm1 = nn.LayerNorm(n_embd, bias = bias)
-        self.attn = MultiHeadSelfAttention(n_embd, n_heads, dropout = 0.0, bias = bias, is_causal=apply_causal_mask, block_size = block_size)
-        self.layernorm2 = nn.LayerNorm(n_embd, bias = bias)
-        self.mlp = MLP(n_embd, dropout = dropout, bias = bias)
-        
+        return n_params
     
-    def forward(self, x, ):
-        """
-        Forward pass for the transformer block.
-        if apply_causal_mask is True, then the attention layer will only attend to the previous tokens, not the future tokens.
-        
-        TODO: should flash attention be enabled once globally in GPT.forward() or should it be applied in each transformer block?
-        """
-        # with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False):
-        x = x + self.attn(self.layernorm1(x))[0] #pre-normalization
-        x = x + self.mlp(self.layernorm2(x)) 
-        return x            
-        
     
-class GPT(nn.Module):
+    
+class GPT(nn.Module, BaseModel, HF_base):
+    
+    model_name = 'GPT'
     def __init__(self,
                 block_size: int = 1024,
                 vocab_size: int = 50304, # GPT-2 vocab_size of 50257, padded up to nearest multiple of 64 for efficiency,
@@ -124,7 +68,6 @@ class GPT(nn.Module):
             n_embd (int): The dimension of the token embeddings and the positional embeddings.
             dropout (float): The dropout rate.
             bias (bool): Whether to include bias in Linears and LayerNorms.
-            flash_attention (bool): Whether to use FlashAttention optimized kernel for attention. If False, use standard dot-product attention.
         """
         
         super().__init__()
@@ -150,37 +93,33 @@ class GPT(nn.Module):
         self._residual_init_weights() #per GPT2 paper
         
         
+        self.forward_fn = self._gpt_forward_impl #we separately define forward_fn so that custom defined huggingface models can easily implement their forwarding.
+        
+
+        
+        
     @torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False)
-    def forward(self, idx):
+    def forward(self, idx): 
+        assert hasattr(self, 'forward_fn'), f'You need to implement a forward_fn function as attribute for the model to process inputs.'
+        assert isinstance(idx, torch.Tensor), f'forward function should only have one argument as input, i.e., the input tensor of shape (bs, seq_len)'
+        return self.forward_fn(self, idx)
+        
+    def _gpt_forward_impl(self, idx):
+        f'implentation of the forward function for the generic GPT class'
+        
         _,t = idx.shape
-        assert t<=self.block_size, f'Cannot forward, model block size is exhausted. Model block size is {self.block_size}, but input sequence length is {t}.'
+        assert t<=self.block_size, f'Cannot forward -- model block size is exhausted. Model block size is {self.block_size}, but input sequence length is {t}.'
         pos = torch.arange(t, dtype = torch.long, device = idx.device) #shape (t,)
         
         x = self.wpe(pos)
-        x = x+ self.wte(idx)
+        x = x + self.wte(idx)
         x = self.dropout(x) 
         
         for block in self.layers: x = block(x)
         x = self.layernorm_final(x)
     
         return self.head(x)
-            
     
-    def get_num_params(self, non_embedding=True):
-        """
-        Return the number of parameters in the model.
-        For non-embedding count (default), the position embeddings get subtracted.
-        The token embeddings would too, except due to the parameter sharing these
-        params are actually used as weights in the final layer, so we include them.
-        """
-        n_params = sum(p.numel() for p in self.parameters())
-        if non_embedding: n_params -= self.wpe.weight.numel()
-        
-        params_excl_embeddings = n_params - self.wte.weight.numel()
-        
-        print(f'Number of parameters: {n_params/1e6:.2f}M. Number of parameters (excluding embeddings): {params_excl_embeddings/1e6:.2f}M. Embeddings occupy {params_excl_embeddings/n_params*100:.2f}% of the total parameter count. ')
-        
-        return n_params
         
         
     @torch.no_grad()
@@ -224,50 +163,45 @@ class GPT(nn.Module):
     
     
     @classmethod
-    def from_pretrained(cls, model_type:str, override_arge:dict = None):
+    def as_variant(cls, model_type:str, override_args:dict = None):
+        f'to TEST'
+        f"""
+        used to create an instance of the GPT model with a specific configuration based on the model_type parameter. 
+        The model_type should be one of the following: 'gpt2', 'gpt2-medium', 'gpt2-large', 'gpt2-xl'. 
+        These correspond to different configurations of the GPT model with varying numbers of layers, embedding dimensions, heads, vocabulary size, block size, and whether to use bias or not.
+        """
         supported_models = ['gpt2', 'gpt2-medium', 'gpt2-large', 'gpt2-xl']
         assert model_type in supported_models, f'Unsupported model type. Supported model types are: {supported_models}'
         if override_args is None: override_args = {} 
         assert all(k=='dropout' for k in override_args) #only dropout is overridable for now. According to Karpathy's repo. 
         
-        try:
-            from transformers import GPT2LMHeadModel
-        except ImportError: 
-            raise ImportError('Huggingface transformers is not installed. Please install it using pip install transformers')
-    
         config_args  = {'gpt2': {'n_layer': 12, 'n_embd': 768, 'n_head': 12, 'vocab_size': 50257, 'block_size': 1024, 'bias': True}, #124M params
                         'gpt2-medium': {'n_layer': 24, 'n_embd': 1024, 'n_head': 16, 'vocab_size': 50257, 'block_size': 1024, 'bias': True}, #345M params
                         'gpt2-large': {'n_layer': 36, 'n_embd': 1280, 'n_head': 20, 'vocab_size': 50257, 'block_size': 1024, 'bias': True}, #774M params
                         'gpt2-xl': {'n_layer': 48, 'n_embd': 1600, 'n_head': 25, 'vocab_size': 50257, 'block_size': 1024, 'bias': True}, #1558M params
         }[model_type]
         
-        model = self(**config_args, **override_args)
-        
-        
-        return model
+        _model =  cls(**config_args, **override_args)
+        _model.model_name = model_type
+        return _model
     
     
-    def __str__(self): 
-        f'get model name along with number of parameters in millions/billions'
-        def _format_number(num):
-            if num >= 1_000_000_000:
-                return f"{num / 1_000_000_000:.1f}B"
-            elif num >= 1_000_000:
-                return f"{num / 1_000_000:.1f}M"
-            else:
-                return str(num)
-            
-        return f'gpt-{_format_number(self.num_params)}'
     
-    @property
-    def num_params(self):
-        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+    @classmethod
+    def from_hf(cls, model_identifier):
+                
+        instance = cls.__new__(cls)
+        super(cls, instance).__init__() #for nn.Module
         
+        hf_model  = instance.get_hf_model(model_identifier)
+        for key, value in hf_model.config.items(): setattr(instance, key, value)
+        instance.layers = hf_model  
+        
+        #defining the forward_fn for proper forwarding. 
+        instance.forward_fn = lambda x: instance.layers(x).logits
+        return instance
+    
 
-if __name__=='__main__':
-    model = GPT(block_size=512, n_layer = 109)
-    print(str(model))
-    
         
         
         
