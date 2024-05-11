@@ -102,7 +102,7 @@ class GPT(nn.Module, BaseModel, HF_base):
     def forward(self, idx): 
         assert hasattr(self, 'forward_fn'), f'You need to implement a forward_fn function as attribute for the model to process inputs.'
         assert isinstance(idx, torch.Tensor), f'forward function should only have one argument as input, i.e., the input tensor of shape (bs, seq_len)'
-        return self.forward_fn(self, idx)
+        return self.forward_fn(idx)
         
     def _gpt_forward_impl(self, idx):
         f'implentation of the forward function for the generic GPT class'
@@ -189,28 +189,22 @@ class GPT(nn.Module, BaseModel, HF_base):
     
     @classmethod
     def from_hf(cls, model_identifier):
+        f"""Create an instance of the GPT model from a Huggingface model identifier. 
+        The model_identifier should be a string that corresponds to a model in the Huggingface model hub.
+        Basically this model will behave exactly like the GPT class, except that the model parameters will be loaded from the Huggingface model hub.
+        """
                 
         instance = cls.__new__(cls)
         super(cls, instance).__init__() #for nn.Module
         
         hf_model  = instance.get_hf_model(model_identifier)
         for key, value in hf_model.config.items(): setattr(instance, key, value)
-        instance.layers = hf_model  
         
+        
+        #storing the model parameters in the class instance
+        instance.layers = hf_model  
         #defining the forward_fn for proper forwarding. 
         instance.forward_fn = lambda x: instance.layers(x).logits
         return instance
-    
-
-        
-        
-        
-        
-        
-        
-        
-        
-    
-
     
         

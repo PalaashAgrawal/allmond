@@ -10,8 +10,7 @@ Use the `GPT` class to define a pytorch based model.
 
 - `transformer_components.py` contains various standard blocks used in a transformer architecture. You can use them, along with custom Implementations to create a custom model architecture class. 
 - `gpt.py` brings together the components to build a standard GPT architecture. 
-    - (In progress) you can import models from huggingface. Class `GPT` will automatically wrap the model to the standard format (expected by the trainer class)
-    - Different huggingface models define variable names (such as max sequence length) by different names. Hence we can only support limited models for the time being. But feel free to build new wrappers for new classes.
+
 
 - In a nutshell, your custom model class should have the following features. 
 
@@ -22,4 +21,8 @@ Use the `GPT` class to define a pytorch based model.
     - Should preferably include a `get_num_params` function, to calculate number of trainable parameters in the model. As you know, larger models can easily lead to CUDA OOM errors. So for larger models, you would have to adjust batch_size or block_size (context window length)
     - Should preferably include a `model_name` attribute (string) that the function can use to log to wandb (say, if you're experimenting with different model variations). 
 
-- For custom huggingface models, just make sure your you have initialized the model in the right format. 
+- `huggingface_wrappers.py`
+    - You can also import pretrained models from huggingface. Class `GPT` (in `gpt.py`) will automatically wrap the model to the standard format (i.e., the format expected by the trainer class)
+    - For any huggingface model, you only have to create a wrapper in `huggingface_wrappers.py` under the `HF_base` class. Simply return the huggingface model with a config dict (which are stored as attributes in the GPT class). 
+    - (In progress), I'm adding model support slowly, but you can always create your own custom model definition
+

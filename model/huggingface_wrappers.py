@@ -18,14 +18,19 @@ def check_validity(func):
     return wrapper
 
 
+
+
+
 class HF_base:
     supported_hf_models = ['microsoft/Phi-3-mini-4k-instruct',
+                           #add more models here
                         ]
     @check_validity
     def get_hf_model(self, model_identifier):
         if model_identifier not in self.supported_hf_models: raise ValueError(f"Unsupported model identifier. Supported model identifiers are: {self.supported_hf_models}")
         
         if model_identifier=='microsoft/Phi-3-mini-4k-instruct':    return self.phi3_mini(model_identifier)
+        #create more methods like above for each model
     
     
     def phi3_mini(self, model_identifier):
@@ -34,7 +39,9 @@ class HF_base:
                          "model_name": "Phi-3-mini"}
         
         return _model
+
     
+    #add more methods like above for each model. Make sure to overwrite the config attribute of the model with the model's config as dict, along with a model_name key (which is used for logging purposes)
 
 
     
