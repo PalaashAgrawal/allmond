@@ -115,7 +115,7 @@ Navigate to [this](.docs/accelerate.md) document for details.
 ## Customize your training run
 
 ### Customize Model
-See `model/README.md` to see guidelines of building your own pytorch model.
+See `model/README.md` to see guidelines of building your own pytorch model OR import from an existing huggingface model.
 
 ### Customize Data
 See `data/README.md` to see guidelines of downloading custom datasets from huggingface datasets. 

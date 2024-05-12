@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from .transformer_components import TransformerBlock
 from .huggingface_wrappers import HF_base
-
+from .tokenizer import Tokenizer
     
 class BaseModel:
     def __str__(self): 
@@ -43,6 +43,25 @@ class BaseModel:
         
         return n_params
     
+    @torch.no_grad()
+    def _residual_init_weights(self):
+        """
+        Initialize weights for residual connections. Reweight std deviation according to GPT2 paper.
+        The remaining layers are default initialized according to Pytorch. I don't think 0.02 stddev is a necessary condition (Acc to original GPT paper (2018), they say 0.02 "works well", without any proper justification)
+        """
+        for param_name, param in self.named_parameters():
+            if param_name.endswith(('residual_fc.weight', 'residual_projection.weight')): param.div_(torch.sqrt(torch.tensor(2*self.n_layer)))
+
+   
+   
+   
+    
+    
+    
+    
+    
+    
+    
     
     
 class GPT(nn.Module, BaseModel, HF_base):
@@ -56,6 +75,8 @@ class GPT(nn.Module, BaseModel, HF_base):
                 n_embd: int = 768,
                 dropout: float = 0.0,
                 bias: bool = True, # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster,
+                
+                tokenizer_from: str = 'gpt2',
                 ):
         """
         Initializes the GPT-2 model.
@@ -68,6 +89,8 @@ class GPT(nn.Module, BaseModel, HF_base):
             n_embd (int): The dimension of the token embeddings and the positional embeddings.
             dropout (float): The dropout rate.
             bias (bool): Whether to include bias in Linears and LayerNorms.
+            
+            tokenizer_from (str): By default, we use the Tiktoken Tokenizer. This parameter is used to specify  which model to source the tokenizer from (as supported by TikToken). Default to the gpt2 tokenizer, which contains 50,304 tokens.
         """
         
         super().__init__()
@@ -90,7 +113,10 @@ class GPT(nn.Module, BaseModel, HF_base):
         #weight tying
         self.wte.weight = self.head.weight
         
+        
         self._residual_init_weights() #per GPT2 paper
+        
+        self.tokenizer = Tokenizer(tokenizer_from)
         
         
         self.forward_fn = self._gpt_forward_impl #we separately define forward_fn so that custom defined huggingface models can easily implement their forwarding.
@@ -120,18 +146,7 @@ class GPT(nn.Module, BaseModel, HF_base):
     
         return self.head(x)
     
-        
-        
-    @torch.no_grad()
-    def _residual_init_weights(self):
-        """
-        Initialize weights for residual connections. Reweight std deviation according to GPT2 paper.
-        The remaining layers are default initialized according to Pytorch. I don't think 0.02 stddev is a necessary condition (Acc to original GPT paper (2018), they say 0.02 "works well", without any proper justification)
-        """
-        for param_name, param in self.named_parameters():
-            if param_name.endswith(('residual_fc.weight', 'residual_projection.weight')): param.div_(torch.sqrt(torch.tensor(2*self.n_layer)))
-
-    
+          
     @torch.no_grad()
     def generate(self, idx, max_new_tokens, temperature = 1.0, top_k = None):
         """
@@ -198,8 +213,8 @@ class GPT(nn.Module, BaseModel, HF_base):
         super(cls, instance).__init__() #for nn.Module
         
         hf_model  = instance.get_hf_model(model_identifier)
-        for key, value in hf_model.config.items(): setattr(instance, key, value)
-        
+        for key, value in hf_model.cfg_dict.items(): setattr(instance, key, value)
+                
         
         #storing the model parameters in the class instance
         instance.layers = hf_model  

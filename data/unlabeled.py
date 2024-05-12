@@ -131,7 +131,7 @@ class unlabeledDataset():
         
         
         
-        if self._check_data_on_disk(): return self.paths # print(f'Tokenized dataset alre/ady exists at {self.cache_dir}.')
+        if self._check_data_on_disk(): return self.paths # print(f'Tokenized dataset already exists at {self.cache_dir}.')
             
 
         self.tokens = self.dataset.map(lambda example: _text_extractor(encoder_fn, example), 

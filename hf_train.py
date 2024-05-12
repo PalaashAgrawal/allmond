@@ -25,15 +25,15 @@ dataset = "wiki-en"
 mode = 'scratch'
 # ________________________________________hyperparams and settings_________________________
 
-bs=20 #each GPU gets bs = 20, works good for a 24GB GPU
-block_size = 512
+bs=1 #each GPU gets bs = 20, works good for a 24GB GPU
+model_id = 'microsoft/Phi-3-mini-4k-instruct'
 valid_sampler_size = 1000 #how many samples to use for validation. This is only used to check if validation loss is better than best_valid_loss, so that a checkpoint can be saved. Karpathy uses 200 random points
 validate_every = 1000 #1000 iterations, each iteration is bs*total_GPUs inputs
 
 #________________________________________Model_____________________________________________
 
 
-model = GPT(block_size=block_size, n_layer = 12) 
+model = GPT.from_hf(model_id)
 
 #________________________________________data______________________________________________
 
@@ -51,7 +51,7 @@ if not rank_distrib(): print(f'training {str(model)} on {train_dl.n} tokens') #p
     
 
 dls = DataLoaders(train_dl, valid_dl)
-dls.c = model.head.out_features
+dls.c = model.vocab_size
 
 #________________________________________Trainer____________________________________________
 

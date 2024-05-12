@@ -26,3 +26,14 @@ Use the `GPT` class to define a pytorch based model.
     - For any huggingface model, you only have to create a wrapper in `huggingface_wrappers.py` under the `HF_base` class. Simply return the huggingface model with a config dict (which are stored as attributes in the GPT class). 
     - (In progress), I'm adding model support slowly, but you can always create your own custom model definition
 
+
+
+
+### DevLogs
+
+- I decided to move the tokenizer to model submodule (from the data submodule). This decision stems from the following 
+    - For huggingface based models, each model comes with a (potentially) unique tokenizer. So for a developer who wishes to add a new model's support in `huggingface_wrappers`, they should be able to define all the related dependencies (model params, configs AND tokenizer) in a single script. They shouldn't have to jump between scripts. 
+    - This means that in your main script, you pass a tokenizer as `model.tokenizer` instead of a custom defined tokenizer. 
+    - By default (a standard GPT architecture) will use a TikToken Tokenizer. You can define which model's tokenizer you wish to use (as supported by TikToken)
+    - TODO: create functionality for custom tokenizer, even for default GPT based architectures. 
+    
