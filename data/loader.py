@@ -79,7 +79,7 @@ class memmapDL(DataLoader):
         # Expected number of unique items sampled at least once
         expected_unique_samples_sequential = M * prob_in_at_least_one_draw
         expected_unique_samples_sequential 
-        8999999981.449612
+        8999999981.449612 (Which is basically the entire dataset)
         """
         
         self.before_iter()

@@ -1,3 +1,7 @@
+"""
+Contains functionalities to download and tokenize unlabeled text datasets
+"""
+
 import datasets
 from tqdm import tqdm 
 import numpy as np
@@ -6,6 +10,7 @@ from pathlib import Path
 
 
 from .config import config_dict
+from model.tokenizer import Tokenizer
 
 
 
@@ -98,7 +103,14 @@ class unlabeledDataset():
         return (self.dataset[key] for key in self.splits)
     
     
-    def tokenize(self, encoder_fn, save_tokens_to_disk = True, save_path = None, dtype = None):
+    def tokenize(self, encoder, save_tokens_to_disk = True, save_path = None):
+        
+        assert isinstance(encoder, Tokenizer), f"encoder must be an instance of Tokenizer class. Got {type(encoder)}"
+        self.encoder = encoder
+        encoder_fn = self.encoder.tokenize_dataset
+        dtype = encoder._get_numpy_dtype()
+        # self.encoder_model = encoder.encoder_model
+        
         """
         Applies the given process_function (tokenizer) to the dataset,
         with text extracted automatically inside the wrapper function.
@@ -116,6 +128,7 @@ class unlabeledDataset():
             It directly takes an example, allowing process_function to work on the text.
             """
             return f(example['text'])
+        
         
         
         if self._check_data_on_disk(): return self.paths # print(f'Tokenized dataset alre/ady exists at {self.cache_dir}.')
@@ -150,8 +163,6 @@ class unlabeledDataset():
             Each shard is saved as a binary file with the format '<split>.bin', where '<split>' is the name of the dataset split.
             The tokenized data is stored in a numpy memmap array for efficient storage and retrieval.
 
-        TODO:
-            1. if .bin files already exist, directly load tokenized dataset. See if self._load_tokenized_from_bin works?
         """
         
         save_pth = Path(path or self.cache_dir)
@@ -176,148 +187,45 @@ class unlabeledDataset():
 
             # save to disk
             arr.flush()
+        
+        #also save the tokenizer name used to save the tokens
+        with open(save_pth/'tokenizer_name.txt', 'w') as f:
+            f.write(self.encoder.encoder_model)
 
     def _check_data_on_disk(self):
+        """
+        Check if the tokenized dataset already exists on disk.
+        Also check if the tokenizer used is the same as the one used to save the tokens. If not, we retokenize the dataset
+        """
+        
+        #check if tokenizer used is the same as the one to previously save the tokens
+        if not (self.cache_dir/'tokenizer_name.txt').exists(): 
+            print("Can't find which tokenizer was used to save the dataset. Retokenizing")
+            return False
+        
+        with open(self.cache_dir/'tokenizer_name.txt', 'r') as f:
+            tokenizer_name = f.read()
+        if tokenizer_name != self.encoder.encoder_model: 
+            print("Tokenizer does not match the tokenizer used to save the dataset. Retokenizing.")
+            return False
+        
+        
+        
+        
         return not self.force_redownload and all((self.cache_dir/f'{split}.bin').exists() for split in self.splits)
     
-                
-    def _load_tokenized_from_bin(self, split, path=None):
-        """
-        Load the tokenized dataset from disk.
-
-        Args:
-            split (str): The name of the dataset split to load.
-            path (Optional, str or Pathlike): The location where the tokenized dataset is saved. Defaults to None.
-
-        Returns:
-            np.memmap: The tokenized dataset loaded from disk.
-
-        Raises:
-            FileNotFoundError: If the tokenized dataset is not found on disk.
-
-        Notes:
-            This method loads the tokenized dataset from disk.
-            The tokenized data is stored in a numpy memmap array for efficient storage and retrieval.
-        """
-            
-        load_pth = Path(path or self.cache_dir)
-        filename = load_pth/f'{split}.bin'
-        
-        if not filename.exists():
-            raise FileNotFoundError(f"Tokenized dataset not found at {filename}")
-        
-        return np.memmap(filename, dtype=np.uint64, mode='r', shape=(len(self.dataset[split]),))
 
 
 
 
-
-class TiktokenTokenizer():
-    "Tiktoken tokenizer for `lang`"
-    def __init__(self, from_model = "gpt2"):
-        """
-        Initialize the TiktokenTokenizer class.
-        from_model (str): The model to use for encoding.
-        
-        by default, we use gpt2 tokenizer, which has 50,257 tokens
-        """
-        try: import tiktoken
-        except ImportError:
-            raise Exception('Tiktoken module is missing: run `pip install tiktoken==0.6.0`')
-        
-        self.encoder_model = from_model
-        self.encoder = tiktoken.get_encoding(self.encoder_model)
-    
-    def get_vocab_size(self):
-        """
-        Get the vocabulary size of the tokenizer.
-        Returns:
-            int: The vocabulary size.
-        """
-        
-        return self.encoder.n_vocab()
-    
-    
-    def encode(self, text: str, ignore_special_tokens = True, batch=False):
-        
-        """
-        Encodes the given text into tokenized format.
-        
-        Args:
-            text (str): The input text to be encoded.
-            ignore_special_tokens (bool): Whether to ignore special tokens during encoding. Defaults to True.
-            batch (bool): Whether to encode the text in batch mode. Defaults to True.
-        
-        Returns:
-            list or list of lists: The encoded tokenized representation of the input text.
-
-        TODO: 
-        1. accomodate all methods from tiktoken. 
-        2. write function to automatically detect whether batches arrive as single peice or in batches. Batches can be both lists or dataloader generator objecst. How do you unify the representation of lists and dataloader generator objects?
-        3. Make API compatible with fastai text API
-        
-        """
-        
-        if batch: return self.encoder.encode_ordinary_batch(text) if ignore_special_tokens else self.encoder.encode_batch(text) 
-        else: return self.encoder.encode_ordinary(text) if ignore_special_tokens else self.encoder.encode(text)
-        
-    
-    def tokenize_dataset(self, text):
-        f'text is a row from Datasets.Dataset object.'
-            
-            
-        ids = self.encode(text, ignore_special_tokens = True)
-        ids.append(self.encoder.eot_token)#add the end of text token, e.g. 50256 for gpt2 bpe
-        # note acc to Karpath. BUT WHY?: I think eot should be prepended not appended... hmm. it's called "eot" though...
-        out = {'ids': ids, 'len': len(ids)}
-        return out
-        
-             
-    def decode(self, tokens: list, batch=True):
-        """
-        Decodes the given tokens into text.
-        
-        Args:
-            tokens (list): The input tokens to be decoded.
-            batch (bool): Whether to decode the tokens in batch mode. Defaults to True.
-            
-            Note: there is no concept of ignore_special_tokens in decode. Whatever tokens we get, we can simply look them up in the vocabulary and return the corresponding string token.  
-        
-        Returns: str or list of str: The decoded text representation of the input tokens.
-        """
-        
-        return self.encoder.decode_batch(tokens) if batch else self.encoder.decode(tokens)
-    
-    def _get_numpy_dtype(self):
-        f'given the vocab size get the correct numpy dtype. Eg. You dont need uint64 for a vocab size of 50K, but only uint16.'
-        
-        vocab_size = self.encoder.n_vocab
-        
-        dtype_limits = [(np.uint8, np.iinfo(np.uint8).max),
-                        (np.uint16, np.iinfo(np.uint16).max),
-                        (np.uint32, np.iinfo(np.uint32).max),
-                        (np.uint64, np.iinfo(np.uint64).max)]
-    
-        # Select the smallest data type that can handle max_tokens
-        for dtype, max_limit in dtype_limits:
-            if vocab_size <= max_limit:
-                return dtype.__name__
-
-        # If no suitable type found, raise an exception (unlikely with uint64)
-        raise ValueError("Value is too large for available data types.")
-            
-
-
-
-def download_dataset(dataset:str, encoder = TiktokenTokenizer(), force_redownload = False):
-    f'download dataset in tokenized form using encoder'
-    f'TODO: return paths of files directly. This allows us to handle ambiguity'
+def download_dataset(dataset:str, encoder: Tokenizer, force_redownload = False):
+    f'download dataset in tokenized form using encoder'    
     
     assert dataset in config_dict, f"{dataset} is not supported. Available datasets: {config_dict.keys()}"
     dataset_config = config_dict[dataset]()
     n_procs = max(1, int(os.cpu_count()-2)) #leave atleast 2 cores for other processes
     ds = unlabeledDataset(dataset_config, n_procs, force_redownload=force_redownload)
-    path = ds.tokenize(encoder.tokenize_dataset, save_tokens_to_disk = True, dtype = encoder._get_numpy_dtype())
+    path = ds.tokenize(encoder = encoder, save_tokens_to_disk = True)
     return path 
 
 

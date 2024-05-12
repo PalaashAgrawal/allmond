@@ -1,6 +1,6 @@
 # Data 
 
-- unlabeled.py contains scripts to download a dataset from huggingface datasets, and also for tokenizer methods (to save the text as tokenized data in .bin files)
+- unlabeled.py contains scripts to download a dataset from huggingface datasets. 
 
 
 - loader.py is meant to retrieve data from  saved .bin files (containing tokenized data), and return dataloaders. s
@@ -11,8 +11,6 @@
 
 1. `unlabeled.py` contains functions to download unlabeled text datasets (each dataset needs to have a config in the form of a class in `cofig.py`). 
     - use the `download_dataset(...)` function to download data using an id (string that represents name of the dataset, see config.py to see list of supported datasets. You can obviously add in more datasets there)
-    - the tokenizer class is a template to be used to tokenize the dataset before saving to disk, AS WELL AS to find dtype of a given dataset. It is also used for inference (text decoding)
-    
 
 
 2. `loader.py` contains dataloader functions to create dataloader corresponding to a dataset.
