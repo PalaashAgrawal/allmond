@@ -1,7 +1,7 @@
 # Trainer (aka Learner)
 This handles training of a model on a given dataset. 
 
-- `learner.py`
+- `LLMLearner.py`
 
     Modified fastai Learner class to incorporate efficient training of LLMs. 
 
