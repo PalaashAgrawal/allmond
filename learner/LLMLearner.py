@@ -93,6 +93,20 @@ class LLMLearner(Learner):
         try: self(f'before_{event_type}');  f();  self(f'after_{event_type}')
         except ex: self(f'after_cancel_{event_type}')
         final()
+        
+        
+    def _do_one_batch(self):
+        f'PAg: modified to support CPU offloading in FSDP, by casting yb to the device of the model prediction'
+        self.pred = self.model(*self.xb)
+        self('after_pred')
+        
+        if len(self.yb):
+            self.yb = tuple(map(lambda y: y.to(self.pred.device), self.yb)) #required for CPU offloading in FSDP
+            self.loss_grad = self.loss_func(self.pred, *self.yb)
+            self.loss = self.loss_grad.clone()
+        self('after_loss')
+        if not self.training or not len(self.yb): return
+        self._do_grad_opt()
 
 
     
