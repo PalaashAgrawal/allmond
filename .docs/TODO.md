@@ -1,17 +1,16 @@
 # TODO
 
-1. ~~Model parallelization across GPUs (instead of data parallelization) ?~~
-2. ~~Quantization~~
-3. Instruct Finetuning of model
-4. Evaluation on benchmarks
-5. Combining multiple datasets for training? 
-6. ~~FSDP (instead of 1.)~~ (Done)
-7. CPU Offloading in FSDP. 
-    - `RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:1 and cpu! (when checking argument for argument target in method wrapper_CUDA_nll_loss_forward)`
-8. QLoRA (instead of (2). Quantization during training isnt without LoRA doesnt make sense, because gradients will be zero) (IS IT EVEN REQUIRED FOR SMALLER MODELS?)
-
-9. Tokenize and collate on the fly (you shouldnt have to save on disk)
-10. gradient checkpointing?
+- ~~Model parallelization across GPUs (instead of data parallelization) ?~~
+- ~~Quantization~~
+- ~~FSDP (instead of 1.)~~ (Done)
+- ~~CPU Offloading in FSDP. ~~
+- (TOP PRIORITY) Instruct Finetuning of model
+- (TOP PRIORITY) Evaluation on benchmarks ([eleutherAI/lm-harness](https://github.com/EleutherAI/lm-evaluation-harness))
+- Combining multiple datasets for training? 
+- (HIGH PRIORITY) QLoRA (instead of (2). Quantization during training isnt without LoRA doesnt make sense, because gradients will be zero) (IS IT EVEN REQUIRED FOR SMALLER MODELS?)
+- Tokenize and collate on the fly (you shouldnt have to save on disk)
+- (TOP PRIORITY) gradient checkpointing?
+- Automatic selection of largest batch size? (ElutherAI has functionality for that. Check the source code!)
 
 
 
