@@ -21,6 +21,17 @@ This repo is a very _clean pythonic implementation_ of LLM pipelines.
 
 Without going into much details here to keep this README concise, see [here](/.docs/whatMakesThisRepoUnique.md) for more details and design choice justifications. 
 
+## Key Features of this repo
+
+
+- Download any HF dataset quickly. 
+- Define custom architectures, or download any HF model (for continual pretraining)
+- Automatic setup of Data, Model and Tokenizer using high-level APIs.
+- Easy setup of Distributed Training (single-GPU, DDP, FSDP, CPU Offloading etc.)
+- Automatic checkpointing of Model based on best validation loss.
+
+
+
 ## This Repo's components in a nutshell
 
 

@@ -26,22 +26,21 @@ mode = 'scratch'
 # ________________________________________hyperparams and settings_________________________
 
 bs=1 #each GPU gets bs = 20, works good for a 24GB GPU
-# block_size = 512
-block_size = 512
+model_id = 'microsoft/Phi-3-mini-4k-instruct'
 valid_sampler_size = 1000 #how many samples to use for validation. This is only used to check if validation loss is better than best_valid_loss, so that a checkpoint can be saved. Karpathy uses 200 random points
 validate_every = 1000 #1000 iterations, each iteration is bs*total_GPUs inputs
-
+block_size = 512
 #________________________________________Model_____________________________________________
 
-
-model = GPT(block_size=block_size, n_layer = 150) 
+#by default, block_size will be set to the max sequence length of the model, but it may cause OOM errors. So, set it to a lower value
+model = GPT.from_hf(model_id, block_size = block_size)
 
 #________________________________________data______________________________________________
 
 train_path, valid_path = rank0_first(lambda: download_dataset(dataset = dataset, encoder = model.tokenizer)) #check if data exists, download only for rank0 GPU. 
-train_dl = memmapDL(train_path, bs = bs, block_size=model.block_size, 
+train_dl = memmapDL(train_path, bs = bs, block_size=model.block_size//4, 
                       dtype=model.tokenizer._get_numpy_dtype())
-valid_dl = memmapDL(valid_path, bs = bs, block_size=model.block_size, 
+valid_dl = memmapDL(valid_path, bs = bs, block_size=model.block_size//4, 
                       dtype=model.tokenizer._get_numpy_dtype(), 
                       sample_size = valid_sampler_size)
 
@@ -52,7 +51,7 @@ if not rank_distrib(): print(f'training {str(model)} on {train_dl.n} tokens') #p
     
 
 dls = DataLoaders(train_dl, valid_dl)
-dls.c = model.head.out_features
+dls.c = model.vocab_size
 
 #________________________________________Trainer____________________________________________
 
