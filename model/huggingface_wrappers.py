@@ -61,6 +61,8 @@ class HF_base:
                          "tokenizer": tokenizer,
                          }
         
+        # _model._attn_implementation = 'eager'
+        
         
         return _model
 

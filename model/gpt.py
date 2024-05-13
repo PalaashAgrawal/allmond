@@ -203,7 +203,7 @@ class GPT(nn.Module, BaseModel, HF_base):
     
     
     @classmethod
-    def from_hf(cls, model_identifier):
+    def from_hf(cls, model_identifier, **kwargs):
         f"""Create an instance of the GPT model from a Huggingface model identifier. 
         The model_identifier should be a string that corresponds to a model in the Huggingface model hub.
         Basically this model will behave exactly like the GPT class, except that the model parameters will be loaded from the Huggingface model hub.
@@ -214,12 +214,14 @@ class GPT(nn.Module, BaseModel, HF_base):
         
         hf_model  = instance.get_hf_model(model_identifier)
         for key, value in hf_model.cfg_dict.items(): setattr(instance, key, value)
-                
         
         #storing the model parameters in the class instance
         instance.layers = hf_model  
         #defining the forward_fn for proper forwarding. 
         instance.forward_fn = lambda x: instance.layers(x).logits
+        
+        for key, value in kwargs.items(): setattr(instance, key, value)
+        
         return instance
     
         
