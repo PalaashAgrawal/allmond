@@ -11,6 +11,8 @@
 8. QLoRA (instead of (2). Quantization during training isnt without LoRA doesnt make sense, because gradients will be zero) (IS IT EVEN REQUIRED FOR SMALLER MODELS?)
 
 9. Tokenize and collate on the fly (you shouldnt have to save on disk)
+10. gradient checkpointing?
+
 
 
 
