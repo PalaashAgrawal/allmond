@@ -25,9 +25,10 @@ Without going into much details here to keep this README concise, see [here](/.d
 
 
 - Download any HF dataset quickly. 
-- Define custom architectures, or download any HF model (for continual pretraining)
+- Define custom architectures, or download any HF model (for continual pretraining).
 - Automatic setup of Data, Model and Tokenizer using high-level APIs.
-- Easy setup of Distributed Training (single-GPU, DDP, FSDP, CPU Offloading etc.)
+- Easy setup of Distributed Training (single-GPU, DDP, FSDP, CPU Offloading etc.).
+- Inbuilt support for Mixed Precision Training.
 - Automatic checkpointing of Model based on best validation loss.
 
 
