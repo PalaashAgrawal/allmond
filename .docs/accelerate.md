@@ -45,7 +45,7 @@ fsdp_config:
   fsdp_backward_prefetch: BACKWARD_PRE
   fsdp_cpu_ram_efficient_loading: true
   fsdp_forward_prefetch: true
-  fsdp_offload_params: true
+  fsdp_offload_params: false
   fsdp_sharding_strategy: FULL_SHARD
   fsdp_state_dict_type: SHARDED_STATE_DICT
   fsdp_sync_module_states: true
@@ -66,7 +66,7 @@ use_cpu: false
 
 
 ## NOTE: Usage of FSDP
-For larger models, you might want to use a FSDP strategy, where model layers are also split accross different GPUs, along with the data. In my experience, you should always define a wrap policy `fsdp_auto_wrap_policy` as `TRANSFORMER_BASED_WRAP`, and define the name of the class to wrap `fsdp_transformer_layer_cls_to_wrap`, with the name of the basic transformer block class used in your code. 
+For larger models, you might want to use a FSDP strategy, where model layers are also split accross different GPUs, along with the data. In my experience, you should always define the wrap policy `fsdp_auto_wrap_policy` as `TRANSFORMER_BASED_WRAP` (rather than `SIZE_BASED_WRAP`),  and define the name of the class to wrap `fsdp_transformer_layer_cls_to_wrap`, with the name of the basic transformer block class used in your code. 
 
 For example, 
 - in the default architecture (defined in `model/gpt.py`), the basic transformer class is named as `TransformerBlock`. 
@@ -74,4 +74,5 @@ For example,
 
 
 TODO:
-check if phi3 can work without CPU offloading
+check if phi3 can work without CPU offloading (YES IT DOES!!!)
+check max window size that can be achieved for phi3
