@@ -47,7 +47,7 @@ class unlabeledDataset():
         self.config = datasetConfig
         self.n_proc = n_proc
         self.cache_dir = Path(cache_dir or datasetConfig.default_cache_dir).expanduser()
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        
         
         self.force_redownload = force_redownload
         self.splits = ['train'] + [getattr(self.config, 'split_name', 'val')] if getattr(self.config, 'split_into_train_val', True) else []
@@ -67,14 +67,21 @@ class unlabeledDataset():
                                                 )
         except Exception as e:
             raise RuntimeError(f"Failed to load dataset: {e}")
-            
+        
+        
+        
         if self.cache_dir is not None: 
             if not self.force_redownload and self.cache_dir.exists(): return 
-            # self.cache_dir.mkdir(parents=True, exist_ok=True)
-                                            
+        
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        
         if getattr(self.config, 'split_into_train_val', True): 
             self.split_pct = getattr(self.config, 'split_pct', None)
             self.train, self.val = self.split(val_name = getattr(self.config, 'split_name', 'val')) #by default, split the dataset into train and val sets
+        
+            
+        
+                                            
         
         
         
