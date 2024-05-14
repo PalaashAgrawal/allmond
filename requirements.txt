@@ -8,3 +8,4 @@ wandb
 transformers
 flash-attn #requires >CUDA 11.6
 deepspeed
+bitsandbytes #for QLoRA

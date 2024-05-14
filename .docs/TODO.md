@@ -10,7 +10,9 @@
 - (HIGH PRIORITY) QLoRA (instead of (2). Quantization during training isnt without LoRA doesnt make sense, because gradients will be zero) (IS IT EVEN REQUIRED FOR SMALLER MODELS?)
 - Tokenize and collate on the fly (you shouldnt have to save on disk)
 - (TOP PRIORITY) gradient checkpointing?
-- Automatic selection of largest batch size? (ElutherAI has functionality for that. Check the source code!)
+- Automatic selection of largest batch size? (ElutherAI has functionality for that. Check the source code @[this link](https://github.com/EleutherAI/lm-evaluation-harness/blob/b24ac4b8eb7b32e30f45c16a5be78670dcb25f47/lm_eval/models/huggingface.py#L674)
+
+
 
 
 

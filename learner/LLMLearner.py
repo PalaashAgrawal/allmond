@@ -96,12 +96,19 @@ class LLMLearner(Learner):
         
         
     def _do_one_batch(self):
-        f'PAg: modified to support CPU offloading in FSDP, by casting yb to the device of the model prediction'
+        f'PAg: modified to support CPU offloading, by casting xb,yb to the device of the model prediction'
+        #cast xb, yb to the device of the model prediction
+
+        self.xb = tuple(map(lambda x: x.to(self.model.device), self.xb))
+        self.yb = tuple(map(lambda y: y.to(self.model.device), self.yb))
+        
+        
+        
+        
         self.pred = self.model(*self.xb)
         self('after_pred')
-        
         if len(self.yb):
-            self.yb = tuple(map(lambda y: y.to(self.pred.device), self.yb)) #required for CPU offloading in FSDP
+            # self.yb = tuple(map(lambda y: y.to(self.pred.device), self.yb)) #required for CPU offloading in FSDP
             self.loss_grad = self.loss_func(self.pred, *self.yb)
             self.loss = self.loss_grad.clone()
         self('after_loss')

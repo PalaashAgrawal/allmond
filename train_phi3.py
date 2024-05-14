@@ -11,6 +11,8 @@ from fastai.distributed import *
 from fastai.callback.wandb import *
 import wandb
 
+
+
 # os.environ['NCCL_P2P_LEVEL']='NVL'
 #If you see  see an error like this after waiting for a long time. 
 # RuntimeError: Exception occured in `DistributedTrainer` when calling event `before_fit`:  DDP expects same model across all ranks, but Rank 1 has 221 params, while rank 0 has inconsistent 0 params.
@@ -33,7 +35,7 @@ block_size = 512
 #________________________________________Model_____________________________________________
 
 #by default, block_size will be set to the max sequence length of the model, but it may cause OOM errors. So, set it to a lower value
-model = GPT.from_hf(model_id, block_size = block_size)
+model = GPT.from_hf(model_id, enable_qlora = true, block_size = block_size)
 
 #________________________________________data______________________________________________
 

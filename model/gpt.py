@@ -3,10 +3,10 @@ import torch
 import torch.nn.functional as F
 
 from .transformer_components import TransformerBlock
-from .huggingface_wrappers import HF_base
+from .huggingface_wrappers import HuggingfaceModelWrappers
 from .tokenizer import Tokenizer
     
-class BaseModel:
+class model_utils:
     def __str__(self): 
         f'get model name along with number of parameters in millions/billions'
         def _format_number(num):
@@ -52,19 +52,12 @@ class BaseModel:
         for param_name, param in self.named_parameters():
             if param_name.endswith(('residual_fc.weight', 'residual_projection.weight')): param.div_(torch.sqrt(torch.tensor(2*self.n_layer)))
 
-   
-   
-   
+
+
     
     
     
-    
-    
-    
-    
-    
-    
-class GPT(nn.Module, BaseModel, HF_base):
+class GPT(nn.Module, HuggingfaceModelWrappers, model_utils):
     
     model_name = 'GPT'
     def __init__(self,
@@ -121,7 +114,22 @@ class GPT(nn.Module, BaseModel, HF_base):
         
         self.forward_fn = self._gpt_forward_impl #we separately define forward_fn so that custom defined huggingface models can easily implement their forwarding.
         
-
+    def _gpt_forward_impl(self, idx):
+        f'implentation of the forward function for the generic GPT class.'
+        f'Educational Note: as you see, this function in invariant to the sequence length. The only reason padding is done, is so that input sequences can be processed in batches.'
+        
+        _,t = idx.shape #idx = b,t
+        assert t<=self.block_size, f'Cannot forward -- model block size is exhausted. Model block size is {self.block_size}, but input sequence length is {t}.'
+        pos = torch.arange(t, dtype = torch.long, device = idx.device) #shape (t,)
+        
+        x = self.wpe(pos) #t,n_embd
+        x = x + self.wte(idx) #b,t,n_embd
+        x = self.dropout(x) #b,t,n_embd
+        
+        for block in self.layers: x = block(x) #b,t,n_embd
+        x = self.layernorm_final(x) #b,t,n_embd
+    
+        return self.head(x) #b,t,vocab_size
         
         
     @torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False)
@@ -130,21 +138,6 @@ class GPT(nn.Module, BaseModel, HF_base):
         assert isinstance(idx, torch.Tensor), f'forward function should only have one argument as input, i.e., the input tensor of shape (bs, seq_len)'
         return self.forward_fn(idx)
         
-    def _gpt_forward_impl(self, idx):
-        f'implentation of the forward function for the generic GPT class'
-        
-        _,t = idx.shape
-        assert t<=self.block_size, f'Cannot forward -- model block size is exhausted. Model block size is {self.block_size}, but input sequence length is {t}.'
-        pos = torch.arange(t, dtype = torch.long, device = idx.device) #shape (t,)
-        
-        x = self.wpe(pos)
-        x = x + self.wte(idx)
-        x = self.dropout(x) 
-        
-        for block in self.layers: x = block(x)
-        x = self.layernorm_final(x)
-    
-        return self.head(x)
     
           
     @torch.no_grad()
@@ -153,6 +146,8 @@ class GPT(nn.Module, BaseModel, HF_base):
         Generate new tokens from the model., given a conditioning sequence of indices idx (LongTensor of shape (b,t)), and complete
         the sequence max_new_tokens times, feeding the predictions back into the model each time. 
         Most likely you'll want to make sure to be in model.eval() mode when calling this function.))
+        
+        TODO: padding mask for the input sequence., so that batch processing is possible
         
         """
         
@@ -170,7 +165,7 @@ class GPT(nn.Module, BaseModel, HF_base):
             probs = F.softmax(logits, dim = -1)
             #sample from the distribution
             idx_next = torch.multinomial(probs, num_samples=1)
-            #append sampled index to the running sequence and continue
+            #append sampled index to the running sequence and continuexw
             idx = torch.cat((idx, idx_next), dim = 1)
         
         return idx 
@@ -203,16 +198,18 @@ class GPT(nn.Module, BaseModel, HF_base):
     
     
     @classmethod
-    def from_hf(cls, model_identifier, **kwargs):
+    def from_hf(cls, model_identifier, enable_qlora = False, **kwargs):
         f"""Create an instance of the GPT model from a Huggingface model identifier. 
         The model_identifier should be a string that corresponds to a model in the Huggingface model hub.
         Basically this model will behave exactly like the GPT class, except that the model parameters will be loaded from the Huggingface model hub.
+        
+        kwargs in this case are set as attributes of the GPT model instance.
         """
                 
         instance = cls.__new__(cls)
         super(cls, instance).__init__() #for nn.Module
         
-        hf_model  = instance.get_hf_model(model_identifier)
+        hf_model  = instance.get_hf_model(model_identifier, enable_qlora = enable_qlora)
         for key, value in hf_model.cfg_dict.items(): setattr(instance, key, value)
         
         #storing the model parameters in the class instance
@@ -223,5 +220,8 @@ class GPT(nn.Module, BaseModel, HF_base):
         for key, value in kwargs.items(): setattr(instance, key, value)
         
         return instance
+    
+    @property
+    def device(self): return next(self.parameters()).device
     
         
