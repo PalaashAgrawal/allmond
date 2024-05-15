@@ -1,5 +1,5 @@
 from fastai.text.all import * #this is a very lazy import. Basically imports everything
-from fastai.learner import *    
+from fastai.learner import *   
 
 
 def save_model(file, model, opt, iteration, with_opt = True, with_iter = True, pickle_protocol = 2, **torch_save_kwargs):
@@ -67,9 +67,7 @@ class LLMLearner(Learner):
             start_iter = start_iter or self.resumeIter['iter']    
             
         if start_epoch != 0 or start_iter != 0:
-            cbs = L(cbs) + SkipToIter(start_epoch, start_iter)
-            
-            
+            cbs = L(cbs) + SkipToIter(start_epoch, start_iter)         
         
         
         with self.added_cbs(cbs):
@@ -99,7 +97,7 @@ class LLMLearner(Learner):
         f'PAg: modified to support CPU offloading, by casting xb,yb to the device of the model prediction'
         #cast xb, yb to the device of the model prediction
 
-        self.xb = tuple(map(lambda x: x.to(self.model.device), self.xb))
+        # self.xb = tuple(map(lambda x: x.to(self.model.device), self.xb))
         self.yb = tuple(map(lambda y: y.to(self.model.device), self.yb))
         
         

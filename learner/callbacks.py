@@ -1,6 +1,6 @@
 from fastai.text.all import *
 from fastai.distributed import *
-
+from torch import nn
 
 class save_checkpoints(Callback):
 
@@ -42,19 +42,8 @@ class save_checkpoints(Callback):
         self.model_dir = Path(model_name)
         self.checkpoint_name = checkpoint_name
         self.every_iters = every_iters
-        self.best_valid_loss = float('inf')
+        self.best_valid_loss = float('inf')        
         
-    
-    # def before_fit(self):
-        
-    #     if self.path: self.learn.path = self.path
-    #     if self.model_dir: self.learn.model_dir = self.model_dir
-        
-        
-    #     checkpoint = self.path/self.model_dir/f'{self.checkpoint_name}.pth'
-    #     if checkpoint.exists():
-    #         print(f'Resuming training using checkpoint {checkpoint}')
-    #         self.learn.load(self.checkpoint_name)
         
     
     def after_step(self):
@@ -86,22 +75,56 @@ class save_checkpoints(Callback):
                     count += yb.shape[0]
             
             loss = accumulated_loss / count
-            
-            # res = self.learn.validate()
-            
+                        
            
             
             if not rank_distrib() and loss< self.best_valid_loss: #only save for 
                 self.best_valid_loss = loss
                 self.learn.save(f'{self.checkpoint_name}', with_opt=True, with_iter = True)                
         
-            #need to set the model back to training setting
-            # self.learn.pct_train=(self.learn.epoch + pct/self.learn.n_epoch)/self.learn.n_epoch
-            # self.model.train()
-            # self.learn.training=True
-            
-            # self.learn(f'before_fit')
-            # self.learn.pct_train=(self.learn.epoch + pct/self.learn.n_epoch)/self.learn.n_epoch
-                    
-                
 
+
+class qlora_resolve(Callback):
+    
+    def remove_hook_from_module(self, module: nn.Module, recurse = False):
+        """
+        Minor Changes in the remove_hook_from_module from `accelerater.hooks.py`
+        For Quantized modes, this function creates a lot of problems. Specifically, it doesnt remove the AlignDevicesHook hook from the model. 
+        This hook somehow misaligns the input to LLM and the model (it always puts the input to cuda:0)
+        So we have to remove the hook using this function. 
+        But the problem is that, delattr, for some reason, doesnt remove the hook from the model.
+        So we do a few changes (like first reassigning the variables, and then deleting them) to remove the hook.
+        """
+        
+        try:
+            from accelerate.hooks import AlignDevicesHook
+        except:
+            print("accelerate package not founds")
+
+        module._hf_hook = AlignDevicesHook()
+        
+        if hasattr(module, "_hf_hook"):
+            module._hf_hook.detach_hook(module)
+            delattr(module, "_hf_hook")
+
+        if hasattr(module, "_old_forward"):
+            # Overriding a GraphModuleImpl forward freezes the forward call and later modifications on the graph will fail.
+            # Reference: https://pytorch.slack.com/archives/C3PDTEV8E/p1705929610405409
+            if "GraphModuleImpl" in str(type(module)):
+                module.__class__.forward = module._old_forward
+            else:
+                module.forward = module._old_forward
+            
+            module._old_forward = None
+            delattr(module, "_old_forward")
+
+        # if recurse:
+        #     for child in module.children():
+        #         remove_hook_from_module(child, recurse)
+
+        return module
+    
+    
+    def before_fit(self):
+        self.learn.model = self.remove_hook_from_module(self.learn.model.layers)
+        

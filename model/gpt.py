@@ -217,6 +217,24 @@ class GPT(nn.Module, HuggingfaceModelWrappers, model_utils):
         #defining the forward_fn for proper forwarding. 
         instance.forward_fn = lambda x: instance.layers(x).logits
         
+        # to resolve HF AlignDevicesHook issue
+        # def tmp_AlignDevice(module, *args, **kwargs):
+        #     # module._hf_hook.pre_forward(module, *args, **kwargs)
+        #     print('meow')
+        #     return args, kwargs
+        
+        
+        # model._hf_hook.detach_hook(model)
+        
+        
+        # def _forward_fn_hf(x):
+        #     instance.layers._hf_hook.detach_hook(instance.layers)
+        #     # if hasattr(instance.layers,'_hf_hook'): instance.layers._hf_hook.pre_forward = tmp_AlignDevice
+            
+        #     return instance.layers(x).logits
+        # instance.forward_fn = _forward_fn_hf
+        
+        
         for key, value in kwargs.items(): setattr(instance, key, value)
         
         return instance

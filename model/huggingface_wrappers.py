@@ -3,9 +3,21 @@ from torch import nn
 import torch
 from functools import wraps
 from .tokenizer import Tokenizer    
+from accelerate.hooks import remove_hook_from_module, AlignDevicesHook
 
 
-
+class dummy_hook(AlignDevicesHook):
+    def __init__(self):
+        super().__init__()
+    def pre_forward(self, module, *args, **kwargs):
+        print('used')
+        return args, kwargs
+    def post_forward(self, module, output): 
+        print('used atleast')
+        return output
+        
+        
+        
 def check_model_validity(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -107,14 +119,19 @@ class HuggingFaceModelLoader:
         )
 
         # Get model
-        model = AutoModelForCausalLM.from_pretrained(model_identifier, trust_remote_code=True, quantization_config=bnb_config)  # Internally uses bitsandbytes
+        model = AutoModelForCausalLM.from_pretrained(model_identifier, trust_remote_code=True, quantization_config=bnb_config, low_cpu_mem_usage = True, device_map="auto")  # Internally uses bitsandbytes
 
         # Prepare model for kbit quantization
         model = prepare_model_for_kbit_training(model)
 
         # Get LoRA model
         model = get_peft_model(model, lora_config)
-
+     
+        
+        
+        
+        
+        
         return model
         
         

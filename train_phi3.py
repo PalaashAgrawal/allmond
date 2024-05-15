@@ -3,7 +3,7 @@ from data.loader import memmapDL, distributedMemmapDL
 
 from model.gpt import GPT
 
-from learner.callbacks import save_checkpoints
+from learner.callbacks import save_checkpoints, qlora_resolve
 from learner.LLMLearner import LLMLearner
 
 from fastai.text.all import *
@@ -32,10 +32,12 @@ model_id = 'microsoft/Phi-3-mini-4k-instruct'
 valid_sampler_size = 1000 #how many samples to use for validation. This is only used to check if validation loss is better than best_valid_loss, so that a checkpoint can be saved. Karpathy uses 200 random points
 validate_every = 1000 #1000 iterations, each iteration is bs*total_GPUs inputs
 block_size = 512
+
+qlora = True
 #________________________________________Model_____________________________________________
 
 #by default, block_size will be set to the max sequence length of the model, but it may cause OOM errors. So, set it to a lower value
-model = GPT.from_hf(model_id, enable_qlora = true, block_size = block_size)
+model = GPT.from_hf(model_id, enable_qlora = qlora, block_size = block_size)
 
 #________________________________________data______________________________________________
 
@@ -61,7 +63,10 @@ check_and_save_model = save_checkpoints(dir = Path('checkpoints'),
                                                 model_name = 'gpt', 
                                                 checkpoint_name = str(model), 
                                                 every_iters = validate_every)
+
 cbs = [check_and_save_model]
+if qlora: cbs+=[qlora_resolve] #to resolve accelerate device align issue (only for quantized models)
+
 if log_wandb:
     cbs.append(WandbCallback())
     wandb.init(project=project, name = f"{id}_{str(model)}_{mode}")
