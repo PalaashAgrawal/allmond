@@ -68,6 +68,8 @@ use_cpu: false
 ## NOTE: Usage of FSDP
 For larger models, you might want to use a FSDP strategy, where model layers are also split accross different GPUs, along with the data. In my experience, you should always define the wrap policy `fsdp_auto_wrap_policy` as `TRANSFORMER_BASED_WRAP` (rather than `SIZE_BASED_WRAP`),  and define the name of the class to wrap `fsdp_transformer_layer_cls_to_wrap`, with the name of the basic transformer block class used in your code. 
 
+TODO: define optional transformer block name in huggingface_wrappers, and set os environ variable natively. 
+
 For example, 
 - in the default architecture (defined in `model/gpt.py`), the basic transformer class is named as `TransformerBlock`. 
 - In Huggingface based Phi3 model, the basic block is named Phi3DecoderLayer
