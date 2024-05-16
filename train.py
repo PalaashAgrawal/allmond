@@ -34,7 +34,7 @@ validate_every = 1000 #1000 iterations, each iteration is bs*total_GPUs inputs
 #________________________________________Model_____________________________________________
 
 
-model = GPT(block_size=block_size, n_layer = 150) 
+model = GPT(block_size=block_size) 
 
 #________________________________________data______________________________________________
 
@@ -77,6 +77,6 @@ learn = LLMLearner(dls,
                 ).to_bf16()
 
 #check and load previous checkpoint. Doesnt make sense to do it within the callback, because all callbacks are initialized in the Learner before they are even called
-# learn.check_and_load_learner(check_and_save_model.checkpoint_name, device = rank_distrib() if num_distrib() else None) #initialize each learner to respective device
+learn.check_and_load_learner(check_and_save_model.checkpoint_name, device = rank_distrib() if num_distrib() else None) #initialize each learner to respective device
 
 with learn.distrib_ctx(): learn.fit_one_cycle(1, 1e-4)

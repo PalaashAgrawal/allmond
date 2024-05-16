@@ -86,6 +86,9 @@ class save_checkpoints(Callback):
 
 class qlora_resolve(Callback):
     
+    def __init__(self, enable_qlora = True):
+        self.enable_qlora = enable_qlora
+        
     def remove_hook_from_module(self, module: nn.Module, recurse = False):
         """
         Minor Changes in the remove_hook_from_module from `accelerater.hooks.py`
@@ -126,5 +129,6 @@ class qlora_resolve(Callback):
     
     
     def before_fit(self):
-        self.learn.model = self.remove_hook_from_module(self.learn.model.layers)
+        if self.enable_qlora:
+            self.learn.model.base_model = self.remove_hook_from_module(self.learn.model.base_model)
         

@@ -95,7 +95,7 @@ Without going into much details here to keep this README concise, see [here](/.d
 ### But if you have multiple GPUs... (Distributed Training)
 
 - We use Huggingface Accelerate to carry out distributed training (which itself is built on top of PyTorch DDP). 
-- Before you can launch distributed training using accelerate, you need to create certain configurations that tell acclerate the nature of distributed training For example, 
+- Before you can launch distributed training using accelerate, you need to create certain configurations (using `accelerate config`) that tell acclerate the nature of distributed training For example, 
   - whether the training is distributed across multiple GPUs in a single node, or multiple nodes are involved, 
   - which machine is the main machine, 
   - whether you want DDP or FSDP based distributed training, etc. 
@@ -105,11 +105,12 @@ Navigate to [this](.docs/accelerate.md) document for details.
 
 - Next, simply run
 
-    `accelerate launch train.py`
+    `accelerate launch train.py` 
 
     LLM training runs can be very long, so you may want to just launch this process in the background. `nohup` is a good solution for that. 
 
-    `nohup accelerate launch train.py &`
+- We have provided some configs for both DDP and FSDP settings in the directory `configs`. To run using a specific config (without running `accelerate config` all over again), use the `--config_file` arg. 
+  - to run Phi-3 with QLoRA, using DDP,  run `accelerate launch --config_file configs/singlemachine_DDP.yml train_phi3.py` 
 
 ### Optional: Log progress to W&B 
 

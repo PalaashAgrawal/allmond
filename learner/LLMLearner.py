@@ -2,6 +2,10 @@ from fastai.text.all import * #this is a very lazy import. Basically imports eve
 from fastai.learner import *   
 
 
+#not for PR
+from .callbacks import qlora_resolve
+
+
 def save_model(file, model, opt, iteration, with_opt = True, with_iter = True, pickle_protocol = 2, **torch_save_kwargs):
     "Save `model` to `file` along with `opt` (if available, and if `with_opt`), and iteration information (epoch and iteration) (if available, and if `with_epoch_iter`. This allows automatically resumable training)"
     if with_iter: assert with_opt, f'Optimizer state must be saved for epoch/iteration resumable training. Set with_opt= True  if with_epoch_iter=True. '
@@ -67,7 +71,10 @@ class LLMLearner(Learner):
             start_iter = start_iter or self.resumeIter['iter']    
             
         if start_epoch != 0 or start_iter != 0:
-            cbs = L(cbs) + SkipToIter(start_epoch, start_iter)         
+            cbs = L(cbs) + SkipToIter(start_epoch, start_iter) 
+            
+        #PAg: not for PR
+        cbs = L(cbs)+qlora_resolve(getattr(self.model, 'qlora', False))        
         
         
         with self.added_cbs(cbs):
@@ -75,8 +82,7 @@ class LLMLearner(Learner):
             if wd is None: wd = self.wd
             if wd is not None: self.opt.set_hypers(wd=wd)
             self.opt.set_hypers(lr=self.lr if lr is None else lr)
-            self.n_epoch = n_epoch
-                        
+            self.n_epoch = n_epoch                        
             
             self._with_events(self._do_fit, 'fit', CancelFitException, self._end_cleanup)
             
@@ -99,11 +105,8 @@ class LLMLearner(Learner):
 
         # self.xb = tuple(map(lambda x: x.to(self.model.device), self.xb))
         self.yb = tuple(map(lambda y: y.to(self.model.device), self.yb))
-        
-        
-        
-        
         self.pred = self.model(*self.xb)
+        
         self('after_pred')
         if len(self.yb):
             # self.yb = tuple(map(lambda y: y.to(self.pred.device), self.yb)) #required for CPU offloading in FSDP

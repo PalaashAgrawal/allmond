@@ -7,6 +7,10 @@ from .huggingface_wrappers import HuggingfaceModelWrappers
 from .tokenizer import Tokenizer
     
 class model_utils:
+    
+    @property
+    def device(self): return next(self.parameters()).device
+
     def __str__(self): 
         f'get model name along with number of parameters in millions/billions'
         def _format_number(num):
@@ -55,8 +59,6 @@ class model_utils:
 
 
     
-    
-    
 class GPT(nn.Module, HuggingfaceModelWrappers, model_utils):
     
     model_name = 'GPT'
@@ -102,17 +104,12 @@ class GPT(nn.Module, HuggingfaceModelWrappers, model_utils):
         
         self.layernorm_final = nn.LayerNorm(n_embd, bias = bias)
         self.head = nn.Linear(n_embd, vocab_size, bias = bias)
-        
         #weight tying
         self.wte.weight = self.head.weight
-        
-        
         self._residual_init_weights() #per GPT2 paper
-        
         self.tokenizer = Tokenizer(tokenizer_from)
-        
-        
         self.forward_fn = self._gpt_forward_impl #we separately define forward_fn so that custom defined huggingface models can easily implement their forwarding.
+        
         
     def _gpt_forward_impl(self, idx):
         f'implentation of the forward function for the generic GPT class.'
@@ -122,13 +119,10 @@ class GPT(nn.Module, HuggingfaceModelWrappers, model_utils):
         assert t<=self.block_size, f'Cannot forward -- model block size is exhausted. Model block size is {self.block_size}, but input sequence length is {t}.'
         pos = torch.arange(t, dtype = torch.long, device = idx.device) #shape (t,)
         
-        x = self.wpe(pos) #t,n_embd
-        x = x + self.wte(idx) #b,t,n_embd
+        x = self.wpe(pos) + self.wte(idx) #t,n_embd + b,t,n_embd --> b,t,n_embd
         x = self.dropout(x) #b,t,n_embd
-        
         for block in self.layers: x = block(x) #b,t,n_embd
         x = self.layernorm_final(x) #b,t,n_embd
-    
         return self.head(x) #b,t,vocab_size
         
         
@@ -136,7 +130,10 @@ class GPT(nn.Module, HuggingfaceModelWrappers, model_utils):
     def forward(self, idx): 
         assert hasattr(self, 'forward_fn'), f'You need to implement a forward_fn function as attribute for the model to process inputs.'
         assert isinstance(idx, torch.Tensor), f'forward function should only have one argument as input, i.e., the input tensor of shape (bs, seq_len)'
-        return self.forward_fn(idx)
+        ret =  self.forward_fn(idx)
+        assert isinstance(ret, torch.Tensor), f'forward function should return a tensor. Instead got {type(ret)}'
+        
+        return ret
         
     
           
@@ -181,15 +178,19 @@ class GPT(nn.Module, HuggingfaceModelWrappers, model_utils):
         These correspond to different configurations of the GPT model with varying numbers of layers, embedding dimensions, heads, vocabulary size, block size, and whether to use bias or not.
         """
         supported_models = ['gpt2', 'gpt2-medium', 'gpt2-large', 'gpt2-xl']
-        assert model_type in supported_models, f'Unsupported model type. Supported model types are: {supported_models}'
+        aliases = {'medium': 'gpt2-medium',
+                   'large': 'gpt2-large',
+                   'xl':    'gpt2-xl' 
+                   }
+        assert model_type in supported_models, f'Unsupported model type. Supported variant model types are: {supported_models}'
         if override_args is None: override_args = {} 
         assert all(k=='dropout' for k in override_args) #only dropout is overridable for now. According to Karpathy's repo. 
         
-        config_args  = {'gpt2': {'n_layer': 12, 'n_embd': 768, 'n_head': 12, 'vocab_size': 50257, 'block_size': 1024, 'bias': True}, #124M params
-                        'gpt2-medium': {'n_layer': 24, 'n_embd': 1024, 'n_head': 16, 'vocab_size': 50257, 'block_size': 1024, 'bias': True}, #345M params
-                        'gpt2-large': {'n_layer': 36, 'n_embd': 1280, 'n_head': 20, 'vocab_size': 50257, 'block_size': 1024, 'bias': True}, #774M params
-                        'gpt2-xl': {'n_layer': 48, 'n_embd': 1600, 'n_head': 25, 'vocab_size': 50257, 'block_size': 1024, 'bias': True}, #1558M params
-        }[model_type]
+        config_args  = {'gpt2':         {'n_layer': 12, 'n_embd': 768,  'n_head': 12,   'vocab_size': 50257,  'block_size': 1024, 'bias': True}, #124M params
+                        'gpt2-medium':  {'n_layer': 24, 'n_embd': 1024, 'n_head': 16,   'vocab_size': 50257,  'block_size': 1024, 'bias': True}, #345M params
+                        'gpt2-large':   {'n_layer': 36, 'n_embd': 1280, 'n_head': 20,   'vocab_size': 50257,  'block_size': 1024, 'bias': True}, #774M params
+                        'gpt2-xl':      {'n_layer': 48, 'n_embd': 1600, 'n_head': 25,   'vocab_size': 50257,  'block_size': 1024, 'bias': True}, #1558M params
+                        }[model_type]
         
         _model =  cls(**config_args, **override_args)
         _model.model_name = model_type
@@ -198,7 +199,7 @@ class GPT(nn.Module, HuggingfaceModelWrappers, model_utils):
     
     
     @classmethod
-    def from_hf(cls, model_identifier, enable_qlora = False, **kwargs):
+    def from_hf(cls, model_identifier, enable_qlora:bool = False, **kwargs):
         f"""Create an instance of the GPT model from a Huggingface model identifier. 
         The model_identifier should be a string that corresponds to a model in the Huggingface model hub.
         Basically this model will behave exactly like the GPT class, except that the model parameters will be loaded from the Huggingface model hub.
@@ -208,38 +209,18 @@ class GPT(nn.Module, HuggingfaceModelWrappers, model_utils):
                 
         instance = cls.__new__(cls)
         super(cls, instance).__init__() #for nn.Module
+        instance.qlora = enable_qlora==True
         
         hf_model  = instance.get_hf_model(model_identifier, enable_qlora = enable_qlora)
         for key, value in hf_model.cfg_dict.items(): setattr(instance, key, value)
-        
         #storing the model parameters in the class instance
-        instance.layers = hf_model  
+        instance.base_model = hf_model  
         #defining the forward_fn for proper forwarding. 
-        instance.forward_fn = lambda x: instance.layers(x).logits
-        
-        # to resolve HF AlignDevicesHook issue
-        # def tmp_AlignDevice(module, *args, **kwargs):
-        #     # module._hf_hook.pre_forward(module, *args, **kwargs)
-        #     print('meow')
-        #     return args, kwargs
-        
-        
-        # model._hf_hook.detach_hook(model)
-        
-        
-        # def _forward_fn_hf(x):
-        #     instance.layers._hf_hook.detach_hook(instance.layers)
-        #     # if hasattr(instance.layers,'_hf_hook'): instance.layers._hf_hook.pre_forward = tmp_AlignDevice
-            
-        #     return instance.layers(x).logits
-        # instance.forward_fn = _forward_fn_hf
-        
+        instance.forward_fn = lambda x: instance.base_model(x).logits
         
         for key, value in kwargs.items(): setattr(instance, key, value)
-        
         return instance
     
-    @property
-    def device(self): return next(self.parameters()).device
+    
     
         

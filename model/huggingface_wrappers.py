@@ -3,20 +3,10 @@ from torch import nn
 import torch
 from functools import wraps
 from .tokenizer import Tokenizer    
-from accelerate.hooks import remove_hook_from_module, AlignDevicesHook
+from accelerate import PartialState
+import os
+import logging
 
-
-class dummy_hook(AlignDevicesHook):
-    def __init__(self):
-        super().__init__()
-    def pre_forward(self, module, *args, **kwargs):
-        print('used')
-        return args, kwargs
-    def post_forward(self, module, output): 
-        print('used atleast')
-        return output
-        
-        
         
 def check_model_validity(func):
     @wraps(func)
@@ -29,6 +19,11 @@ def check_model_validity(func):
         assert 'model_name' in model.cfg_dict, f'Make sure that config should have a key "model_name" which is a string. This is used for Logging purposes. '
         assert 'block_size' in model.cfg_dict, f'Make sure that config should have a key "block_size" which is an integer. This is essentially the maximum sequence length of the model. Common names for this are "max_position_embeddings" or "max_seq_len" '
         assert 'tokenizer' in model.cfg_dict and isinstance(model.cfg_dict["tokenizer"], Tokenizer), f'Make sure that config should have a key "tokenizer" which is an instance of the Tokenizer class (see Tokenizer.from_huggingface in tokenizer.py). This is used for encoding and decoding text. '
+        
+        if os.environ.get("ACCELERATE_USE_FSDP", "false") == "true" and os.environ.get("FSDP_AUTO_WRAP_POLICY", "NO_WRAP")=="TRANSFORMER_BASED_WRAP":
+            assert 'fsdp_transformer_layer_cls_to_wrap' in model.cfg_dict and isinstance(model.cfg_dict["fsdp_transformer_layer_cls_to_wrap"], str), f'Make sure that config should have a key "fsdp_transformer_layer_cls_to_wrap" which is a string. This is the name of the Transformer Block in the model'
+            os.environ["FSDP_TRANSFORMER_CLS_TO_WRAP"] = model.cfg_dict['fsdp_transformer_layer_cls_to_wrap']
+            
         return model
     return wrapper
 
@@ -100,11 +95,17 @@ class HuggingFaceModelLoader:
         except ImportError:
             raise ImportError("To enable QLORA, please install the bitsandbytes and peft packages.")
 
+        
+        if use_4bit_quantization and os.environ.get("ACCELERATE_USE_FSDP", "false") == "true":
+            print("QLoRA+FSDP isn't supported yet. Moving back to DDP for now. ")
+            #PAg: https://www.answer.ai/posts/2024-03-06-fsdp-qlora.html made FSDP and QLoRA work
+            os.environ["ACCELERATE_USE_FSDP"] ='false'
+            
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=use_4bit_quantization,
             load_in_8bit=not use_4bit_quantization,
             
-            load_4bit_use_double_quant=True,
+            # load_4bit_use_double_quant=True, #PAg: not used anyways (?)
             bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.bfloat16,
         )
@@ -119,36 +120,17 @@ class HuggingFaceModelLoader:
         )
 
         # Get model
-        model = AutoModelForCausalLM.from_pretrained(model_identifier, trust_remote_code=True, quantization_config=bnb_config, low_cpu_mem_usage = True, device_map="auto")  # Internally uses bitsandbytes
-
+        model = AutoModelForCausalLM.from_pretrained(model_identifier, trust_remote_code=True, quantization_config=bnb_config, low_cpu_mem_usage = True, 
+                                                    device_map={"": PartialState().process_index}, #see https://github.com/artidoro/qlora/issues/186#issuecomment-1943045599
+                                                     )  # Internally uses bitsandbytes
         # Prepare model for kbit quantization
         model = prepare_model_for_kbit_training(model)
-
         # Get LoRA model
         model = get_peft_model(model, lora_config)
-     
-        
-        
-        
-        
         
         return model
         
         
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -179,6 +161,7 @@ class HuggingfaceModelWrappers(HuggingFaceModelLoader):
         
         _model.cfg_dict = {**cfg.to_dict(),
                          "model_name": "Phi-3-mini",
+                         "fsdp_transformer_layer_cls_to_wrap": "Phi3DecoderLayer",
                          "block_size": cfg.max_position_embeddings, #phi3Config defines context length as max_position_embeddings. "block_size" is required for dataloader declaration. 
                          "tokenizer": tokenizer,
                          }        

@@ -12,7 +12,7 @@ fsdp_config:
   fsdp_sharding_strategy: FULL_SHARD
   fsdp_state_dict_type: SHARDED_STATE_DICT
   fsdp_sync_module_states: true
-  fsdp_transformer_layer_cls_to_wrap: Phi3DecoderLayer #in Phi3, the basic block is named Phi3DecoderLayer. This is the class that will be wrapped by FSDP
+  fsdp_transformer_layer_cls_to_wrap: TransformerBlock #Default Name: TransformerBlock, but can be changed to any other class name in huggingface_wrappers.py
   fsdp_use_orig_params: true
 machine_rank: 0
 main_training_function: main
