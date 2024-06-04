@@ -41,8 +41,6 @@ class unlabeledDataset():
             **kwargs: Additional keyword arguments to pass to the dataset loader.
         """
         
-        # Load the dataset
-        # super().__init__()
         
         self.config = datasetConfig
         self.n_proc = n_proc
@@ -55,8 +53,7 @@ class unlabeledDataset():
         
         
         try: 
-                
-        #Assuming that datasets always returns "train" and "test"
+            #Assuming that datasets always returns "train" and "test"
             self.dataset = datasets.load_dataset(
                                                 self.config.dataset_name,
                                                 num_proc=self.n_proc,
@@ -68,21 +65,10 @@ class unlabeledDataset():
         except Exception as e:
             raise RuntimeError(f"Failed to load dataset: {e}")
         
-        
-        
-        if self.cache_dir is not None: 
-            if not self.force_redownload and self.cache_dir.exists(): return 
-        
+
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        
-        if getattr(self.config, 'split_into_train_val', True): 
-            self.split_pct = getattr(self.config, 'split_pct', None)
-            self.train, self.val = self.split(val_name = getattr(self.config, 'split_name', 'val')) #by default, split the dataset into train and val sets
-        
             
-        
-                                            
-        
+
         
         
     def split(self, pct = 0.9995, val_name = 'val'):
@@ -101,33 +87,34 @@ class unlabeledDataset():
         
         self.val_name = val_name
         
-        self.dataset = self.dataset['train'].train_test_split(test_size = 1-pct)
+        self.dataset = self.dataset['train'].train_test_split(test_size = 1-pct) #splits into train and "test", which we later rename to val
         self.dataset[f'{self.val_name}'] = self.dataset.pop('test') #rename the test set to val
         
-        
-        # self.splits = self.dataset.keys()
         
         return (self.dataset[key] for key in self.splits)
     
     
-    def tokenize(self, encoder, save_tokens_to_disk = True, save_path = None):
-        
-        assert isinstance(encoder, Tokenizer), f"encoder must be an instance of Tokenizer class. Got {type(encoder)}"
-        self.encoder = encoder
-        encoder_fn = self.encoder.tokenize_dataset
-        dtype = encoder._get_numpy_dtype()
-        # self.encoder_model = encoder.encoder_model
-        
+    def tokenize(self, encoder_fn):
         """
-        Applies the given process_function (tokenizer) to the dataset,
-        with text extracted automatically inside the wrapper function.
-        
-        Returns: None if save_tokens_to_disk is True. (saves tokens to disk using `dtype` format. Use these files directly)
-        Else, returns the tokenized dataset.
+        Tokenizes the dataset using the given encoder and saves the tokenized dataset to disk.
+
+        Args:
+            encoder_fn: A function that takes an example and returns the tokenized version of the example.
+                This function is used to tokenize the text in each example of the dataset. 
+            save_tokens_to_disk (bool, optional): Whether to save the tokens to disk. Defaults to True.
+            save_path (str or Path, optional): The path to save the tokenized dataset. Defaults to None.
+
+        Returns:
+            list or None: If `save_tokens_to_disk` is True, returns a list of paths where the tokenized dataset is saved.
+                If `save_tokens_to_disk` is False, returns the tokenized dataset.
+
+        Raises:
+            AssertionError: If `encoder_fn` is not callable.
+
+        Note:
+            The tokenized dataset is saved as binary files using the `dtype` format of the encoder.
+
         """
-        save_path = save_path or self.cache_dir
-        self.paths = [save_path/f'{o}.bin' for o in self.splits]
-        
         
         def _text_extractor(f, example):
             """
@@ -135,25 +122,48 @@ class unlabeledDataset():
             It directly takes an example, allowing process_function to work on the text.
             """
             return f(example['text'])
-        
-        
-        
-        if self._check_data_on_disk(): return self.paths # print(f'Tokenized dataset already exists at {self.cache_dir}.')
-            
 
-        self.tokens = self.dataset.map(lambda example: _text_extractor(encoder_fn, example), 
-                                       remove_columns=['text'], 
-                                       desc="tokenizing the splits", 
-                                       num_proc=self.n_proc, )
-        
-        if not save_tokens_to_disk: return self.tokens #in case user wants the tokens directly
-        
-        self._save_tokens_to_disk(self.tokens, path = save_path, dtype = dtype)
-        return self.paths
+        tokens = self.dataset.map(lambda example: _text_extractor(encoder_fn, example),
+                                       remove_columns=['text'],
+                                       desc="tokenizing the splits",
+                                       num_proc=self.n_proc)
+        return tokens
+
         
          
         
-    
+    def process_dataset(self, encoder, save_tokens_to_disk=True, save_path=None):
+        """
+        Split and tokenize dataset
+        """
+        
+        assert isinstance(encoder, Tokenizer), f"encoder must be an instance of Tokenizer class. Got {type(encoder)}"
+        self.encoder = encoder        
+        
+        save_path = save_path or self.cache_dir
+        self.paths = [save_path/f'{o}.bin' for o in self.splits]
+        
+        if self._check_data_on_disk(): return self.paths
+        
+        #split dataset
+        if getattr(self.config, 'split_into_train_val', True):
+            self.split_pct = getattr(self.config, 'split_pct', None)
+            self.train, self.val = self.split(val_name=getattr(self.config, 'split_name', 'val'))
+            
+        
+        #tokenize dataset
+        tokens =  self.tokenize(encoder_fn=self.encoder.tokenize_dataset)
+        if not save_tokens_to_disk: return tokens
+        
+        #save tokens to disk
+        self._save_tokens_to_disk(tokens, path = save_path, dtype = self.encoder._get_numpy_dtype())
+        return self.paths
+        
+        
+        
+        
+        
+        
     def _save_tokens_to_disk(self,  tokens, num_shards=1024, path =None, dtype = None):
         """
         Save the tokenized dataset to disk. 
@@ -196,7 +206,7 @@ class unlabeledDataset():
             arr.flush()
         
         #also save the tokenizer name used to save the tokens
-        with open(save_pth/'tokenizer_name.txt', 'w') as f:
+        with open(save_pth/'tokenizer_name.txt', 'w+') as f:
             f.write(self.encoder.encoder_model)
 
     def _check_data_on_disk(self):
@@ -207,7 +217,7 @@ class unlabeledDataset():
         
         #check if tokenizer used is the same as the one to previously save the tokens
         if not (self.cache_dir/'tokenizer_name.txt').exists(): 
-            print("Can't find which tokenizer was used to save the dataset. Retokenizing")
+            print("Can't find any tokenizer info. Forcing (Re)tokenization of dataset.")
             return False
         
         with open(self.cache_dir/'tokenizer_name.txt', 'r') as f:
@@ -232,8 +242,8 @@ def download_dataset(dataset:str, encoder: Tokenizer, force_redownload = False):
     dataset_config = config_dict[dataset]()
     n_procs = max(1, int(os.cpu_count()-2)) #leave atleast 2 cores for other processes
     ds = unlabeledDataset(dataset_config, n_procs, force_redownload=force_redownload)
-    path = ds.tokenize(encoder = encoder, save_tokens_to_disk = True)
-    return path 
+    paths = ds.process_dataset(encoder = encoder, save_tokens_to_disk = True)
+    return paths
 
 
 
