@@ -134,7 +134,19 @@ class unlabeledDataset():
         
     def process_dataset(self, encoder, save_tokens_to_disk=True, save_path=None):
         """
-        Split and tokenize dataset
+        Split and tokenize dataset.
+
+        Args:
+            encoder (Tokenizer): An instance of the Tokenizer class used for tokenization.
+            save_tokens_to_disk (bool, optional): Whether to save the tokens to disk. Defaults to True.
+            save_path (str, optional): The path to save the tokens. Defaults to None.
+
+        Returns:
+            list: A list of paths where the tokenized dataset is saved.
+
+        Raises:
+            AssertionError: If the encoder is not an instance of the Tokenizer class.
+
         """
         
         assert isinstance(encoder, Tokenizer), f"encoder must be an instance of Tokenizer class. Got {type(encoder)}"
