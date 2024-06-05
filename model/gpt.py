@@ -1,12 +1,27 @@
 from torch import nn
 import torch
 import torch.nn.functional as F
+import numpy as np 
+
 
 from .transformer_components import TransformerBlock
 from .huggingface_wrappers import HuggingfaceModelWrappers
 from .tokenizer import Tokenizer
+from .eval.eval import evalBase
+
+
+from typing import Optional
+
+
+
+
+
     
-class model_utils:
+class gptBase(HuggingfaceModelWrappers, evalBase):
+    
+    def __init__(self):
+        evalBase.__init__(self) #evalBase has some function renamings for convenience
+        
     
     @property
     def device(self): return next(self.parameters()).device
@@ -57,9 +72,11 @@ class model_utils:
             if param_name.endswith(('residual_fc.weight', 'residual_projection.weight')): param.div_(torch.sqrt(torch.tensor(2*self.n_layer)))
 
 
+    
+    
 
     
-class GPT(nn.Module, HuggingfaceModelWrappers, model_utils):
+class GPT(nn.Module, gptBase):
     
     model_name = 'GPT'
     def __init__(self,
@@ -88,7 +105,8 @@ class GPT(nn.Module, HuggingfaceModelWrappers, model_utils):
             tokenizer_from (str): By default, we use the Tiktoken Tokenizer. This parameter is used to specify  which model to source the tokenizer from (as supported by TikToken). Default to the gpt2 tokenizer, which contains 50,304 tokens.
         """
         
-        super().__init__()
+        super().__init__() #nn.Module
+        gptBase.__init__(self)
 
         self.block_size = block_size
         self.vocab_size = vocab_size
@@ -138,22 +156,66 @@ class GPT(nn.Module, HuggingfaceModelWrappers, model_utils):
     
           
     @torch.no_grad()
-    def generate(self, idx, max_new_tokens, temperature = 1.0, top_k = None):
+    def generate(self, idx, max_new_tokens, temperature = 1.0, top_k = None, 
+                 return_input = False,  
+                 return_logprobs: Optional[bool] =False):
         """
         Generate new tokens from the model., given a conditioning sequence of indices idx (LongTensor of shape (b,t)), and complete
         the sequence max_new_tokens times, feeding the predictions back into the model each time. 
-        Most likely you'll want to make sure to be in model.eval() mode when calling this function.))
+        Most likely you'll want to make sure to be in model.eval() mode when calling this function.)
         
-        TODO: padding mask for the input sequence., so that batch processing is possible
+        By default, returns list of newly generated tokens (along with input tokens), unless one of return_* is specified
+
+        Parameters:
+        idx : int
+            The starting index for generation.
+        max_new_tokens : int
+            The maximum number of new tokens to generate.
+        temperature : float, optional, default=1.0
+            The sampling temperature to use.
+        top_k : int, optional, default=None
+            If specified, only consider the top_k most probable tokens at each step.
+            
+        return_input : bool, optional, default=False
+            Whether to return the input tokens along with the generated tokens. 
+
+        #in some cases, you might want to return log probabilities instead of tokens. For eval, you also need to know if the returned logprob is greedy sampled? (ie, if in torch.mutinomial, the highest prob value is sampled or not)
+        return_logprobs : bool, optional, default=False
+            Whether to return the log probabilities of the generated tokens.
+    
+        
+        
+        
+        TODO: 
+        
+        MOST IMP: need to modify probability calculation for input tokens themselves (as in openai example), for lm-eval-harness. 
+        
+        1. padding mask for the input sequence., so that batch processing is possible
+        2. Versatility to return tokens, logits or logprobs
+        
+        
+        
+        Testcases
+        1. Check if the function returns the correct number of tokens
+        2. does it work for temperture 0 
+        3. does it work for top_k
         
         """
+        if return_logprobs: 
+            assert not return_input, f'Cannot return input tokens if return_logprobs is True, because probabilities only apply to predicited tokens, not input tokens, duhh?!'
+            self.is_greedy = True 
+            #initialize empty logprobs tensor
+            logprobs = np.array([]) 
+        else: self.is_greedy = None
         
+        
+        #assert that only one of return_tokens, return_probs and return 
         for _ in range(max_new_tokens):
             #if the sequence context is growing too long we must crop it at block size
             idx_cond = idx if idx.shape[1] <= self.block_size else idx[:, -self.block_size:]
-            logits, _ = self(idx_cond)
+            logits = self(idx_cond) #b,t,vocab_size
             #take the logits of the last token and apply temperature
-            logits = logits[:, -1, :] / temperature
+            logits = logits[:, -1, :] / (temperature+1e-20) #to avoid 0 division error if temperature = 0.0
             #optinally choose only the top_k tokens
             if top_k is not None:
                 v,_ = torch.topk(logits, min(top_k, logits.size(-1)))
@@ -161,11 +223,20 @@ class GPT(nn.Module, HuggingfaceModelWrappers, model_utils):
             #apply softmax to convert logits to (normalized) probabilities
             probs = F.softmax(logits, dim = -1)
             #sample from the distribution
-            idx_next = torch.multinomial(probs, num_samples=1)
-            #append sampled index to the running sequence and continuexw
+            idx_next = torch.multinomial(probs, num_samples=1) if temperature>0 else torch.argmax(probs, dim = -1) #greedy search if temperature is 0
+            
+            #Pag: if return_logprobs is True, we need to return the logprobs of the generated tokens, and check if the token is greedy sampled or not
+            if return_logprobs:
+                logprobs = np.append(logprobs, torch.log(probs[torch.arange(probs.shape[0]), idx_next.squeeze()]).cpu().numpy())
+                self.is_greedy = self.is_greedy and torch.argmax(probs, dim = -1) == idx_next.squeeze()
+                
+                
+            #append sampled index to the running sequence and continue
             idx = torch.cat((idx, idx_next), dim = 1)
         
-        return idx 
+        
+        if return_logprobs: return logprobs
+        return idx if return_input else idx[:, -max_new_tokens:]
     
     
     
@@ -220,7 +291,6 @@ class GPT(nn.Module, HuggingfaceModelWrappers, model_utils):
         
         for key, value in kwargs.items(): setattr(instance, key, value)
         return instance
-    
     
     
         
