@@ -158,7 +158,7 @@ class Tokenizer(BaseTokenizer):
         return out
         
              
-    def decode(self, tokens: list, batch=True, **kwargs):
+    def decode(self, tokens: list, batch=False, **kwargs):
         """
         Decodes the given tokens into text.
         
@@ -170,7 +170,7 @@ class Tokenizer(BaseTokenizer):
         
         Returns: str or list of str: The decoded text representation of the input tokens.
         """
-        if hasattr(self, 'module'): return self.module.decode(tokens, **kwargs)
+        if hasattr(self, 'module'): return self.module.batch_decode(tokens, **kwargs) #if the tokenizer is from huggingface, use the decode method of the huggingface tokenizer
         
         return self.encoder.decode_batch(tokens) if batch else self.encoder.decode(tokens)
     

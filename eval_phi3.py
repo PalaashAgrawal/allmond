@@ -5,4 +5,8 @@ qlora = False
 
 model = GPT.from_hf(model_id, enable_qlora = qlora)
 # simple_evaluate(model, tasks = ['boolq'])
-model.generate()
+# print(model.generate('hello world', max_new_tokens = 10, temperature = 0))
+# print(model.generate([0,45,12,12,2], max_new_tokens = 10))
+
+
+simple_evaluate(model, tasks = ['boolq'])

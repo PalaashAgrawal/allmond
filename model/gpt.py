@@ -10,7 +10,7 @@ from .tokenizer import Tokenizer
 from .eval.eval import evalBase
 
 
-from typing import Optional
+from typing import Optional, Union
 
 
 
@@ -128,6 +128,9 @@ class GPT(nn.Module, gptBase):
         self.tokenizer = Tokenizer(tokenizer_from)
         self.forward_fn = self._gpt_forward_impl #we separately define forward_fn so that custom defined huggingface models can easily implement their forwarding.
         
+        self.tok_encode = self.tokenizer.encode
+        self.eot_token_id = self.tokenizer.eot_token
+        self.max_length = self.block_size
         
     def _gpt_forward_impl(self, idx):
         f'implentation of the forward function for the generic GPT class.'
@@ -156,9 +159,9 @@ class GPT(nn.Module, gptBase):
     
           
     @torch.no_grad()
-    def generate(self, idx, max_new_tokens, temperature = 1.0, top_k = None, 
+    def generate(self, inp, max_new_tokens, temperature = 1.0, top_k = None, 
                  return_input = False,  
-                 return_logprobs: Optional[bool] =False):
+                 return_logprobs: Optional[bool] = False):
         """
         Generate new tokens from the model., given a conditioning sequence of indices idx (LongTensor of shape (b,t)), and complete
         the sequence max_new_tokens times, feeding the predictions back into the model each time. 
@@ -167,8 +170,10 @@ class GPT(nn.Module, gptBase):
         By default, returns list of newly generated tokens (along with input tokens), unless one of return_* is specified
 
         Parameters:
-        idx : int
-            The starting index for generation.
+        inp : torch.Tensor or str
+            The input tokens to condition on. If a string, it will be tokenized using the model's tokenizer. 
+            If a tensor, it should be of shape (b,t) where b is the batch size and t is the sequence length.
+            
         max_new_tokens : int
             The maximum number of new tokens to generate.
         temperature : float, optional, default=1.0
@@ -176,8 +181,12 @@ class GPT(nn.Module, gptBase):
         top_k : int, optional, default=None
             If specified, only consider the top_k most probable tokens at each step.
             
-        return_input : bool, optional, default=False
+        return_input : bool, optional, default=True
             Whether to return the input tokens along with the generated tokens. 
+            
+        
+        Returns:
+        torch.Tensor or str depending on input type. 
 
         #in some cases, you might want to return log probabilities instead of tokens. For eval, you also need to know if the returned logprob is greedy sampled? (ie, if in torch.mutinomial, the highest prob value is sampled or not)
         return_logprobs : bool, optional, default=False
@@ -201,42 +210,116 @@ class GPT(nn.Module, gptBase):
         3. does it work for top_k
         
         """
-        if return_logprobs: 
-            assert not return_input, f'Cannot return input tokens if return_logprobs is True, because probabilities only apply to predicited tokens, not input tokens, duhh?!'
-            self.is_greedy = True 
-            #initialize empty logprobs tensor
-            logprobs = np.array([]) 
-        else: self.is_greedy = None
         
-        
-        #assert that only one of return_tokens, return_probs and return 
-        for _ in range(max_new_tokens):
-            #if the sequence context is growing too long we must crop it at block size
-            idx_cond = idx if idx.shape[1] <= self.block_size else idx[:, -self.block_size:]
-            logits = self(idx_cond) #b,t,vocab_size
-            #take the logits of the last token and apply temperature
-            logits = logits[:, -1, :] / (temperature+1e-20) #to avoid 0 division error if temperature = 0.0
-            #optinally choose only the top_k tokens
-            if top_k is not None:
-                v,_ = torch.topk(logits, min(top_k, logits.size(-1)))
-                logits[logits<v[:, [-1]]] = -float('Inf')
-            #apply softmax to convert logits to (normalized) probabilities
-            probs = F.softmax(logits, dim = -1)
-            #sample from the distribution
-            idx_next = torch.multinomial(probs, num_samples=1) if temperature>0 else torch.argmax(probs, dim = -1) #greedy search if temperature is 0
+        #input can be a single string, single list of ints, list of strings, tensor of shape (b,t) or list of list of ints
+        ret_type = None
+        if isinstance(inp, str):
+            inp = self.tokenizer.encode(inp) #list of ints
+            #convert to tensor
+            inp = torch.tensor(inp).unsqueeze(0)
+            ret_type = 'str'
+        if isinstance(inp, list) and isinstance(inp[0], str):
+            inp = [self.tokenizer.encode(i) for i in inp] #list of list of ints
+            inp = torch.tensor(inp)
+            ret_type = 'str'
+        if isinstance(inp, list) and isinstance(inp[0], int):
+            inp = torch.tensor(inp).unsqueeze(0) #list of ints
+        if isinstance(inp, list) and isinstance(inp[0], list):
+            inp = torch.tensor(inp)
+        assert isinstance(inp, torch.Tensor), f'Unsupported input type. input can be a single string, single list of ints, list of strings, tensor of shape (b,t) or list of list of ints. Instead got {type(inp)}'
             
-            #Pag: if return_logprobs is True, we need to return the logprobs of the generated tokens, and check if the token is greedy sampled or not
+        idx = inp.to(self.device)
+
+        # Initialize logprobs if required
+        if return_logprobs:
+            self.is_greedy = True
+            logprobs = np.array([])
+
+            # Calculate log probabilities for input tokens
+            idx_cond = idx if idx.shape[1] <= self.block_size else idx[:, -self.block_size:]
+            logits = self(idx_cond)  # b, t, vocab_size
+            logits = logits[:, -idx.shape[1]:, :] / (temperature + 1e-20)  # To avoid 0 division error if temperature = 0.0
+            input_probs = F.log_softmax(logits, dim=-1)
+            input_logprobs = input_probs.gather(2, idx.unsqueeze(-1)).squeeze(-1).cpu().numpy()
+            logprobs = np.append(logprobs, input_logprobs.flatten())
+
+        # Generate new tokens
+        for _ in range(max_new_tokens):
+            idx_cond = idx if idx.shape[1] <= self.block_size else idx[:, -self.block_size:]
+            logits = self(idx_cond)  # b, t, vocab_size
+            logits = logits[:, -1, :] / (temperature + 1e-20)  # To avoid 0 division error if temperature = 0.0
+
+            if top_k is not None:
+                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
+                logits[logits < v[:, [-1]]] = -float('Inf')
+            
+            probs = F.softmax(logits, dim=-1)
+            idx_next = torch.multinomial(probs, num_samples=1) if temperature > 0 else torch.argmax(probs, dim=-1).unsqueeze(-1)  # Greedy search if temperature is 0
+
             if return_logprobs:
                 logprobs = np.append(logprobs, torch.log(probs[torch.arange(probs.shape[0]), idx_next.squeeze()]).cpu().numpy())
-                self.is_greedy = self.is_greedy and torch.argmax(probs, dim = -1) == idx_next.squeeze()
-                
-                
-            #append sampled index to the running sequence and continue
-            idx = torch.cat((idx, idx_next), dim = 1)
+                self.is_greedy = self.is_greedy and torch.argmax(probs, dim=-1) == idx_next.squeeze()
+
+            idx = torch.cat((idx, idx_next), dim=1)
+
+        if return_logprobs:
+            return logprobs
+        ret = idx if return_input else idx[:, -max_new_tokens:]
+        if ret_type == 'str':
+            #covert ret tensor to list of ints (or list of list of ints if batched)
+            ret = ret.cpu().numpy().tolist()
+            ret = self.tokenizer.decode(ret, batch = True)
+        return ret
+
+
+        
+        # ret_type = None
+        # #PAg: check if string to idx conversion works
+        # if isinstance(inp, str): 
+        #     inp = self.tokenizer.encode(inp)
+        #     ret_type = 'str'
+        # assert isinstance(inp, torch.Tensor), f'Input should be a tensor or a string. Instead got {type(inp)}'
+        # idx = inp.to(self.device)
         
         
-        if return_logprobs: return logprobs
-        return idx if return_input else idx[:, -max_new_tokens:]
+        
+        # if return_logprobs: 
+        #     # assert not return_input, f'Cannot return input tokens if return_logprobs is True, because probabilities only apply to predicited tokens, not input tokens, duhh?!'
+        #     self.is_greedy = True #we will access this in eval.py to check if the token is greedy sampled or not
+        #     #initialize empty logprobs tensor
+        #     logprobs = np.array([]) 
+        
+        
+        # #assert that only one of return_tokens, return_probs and return 
+        # for _ in range(max_new_tokens):
+        #     #if the sequence context is growing too long we must crop it at block size
+        #     idx_cond = idx if idx.shape[1] <= self.block_size else idx[:, -self.block_size:]
+        #     logits = self(idx_cond) #b,t,vocab_size
+        #     #take the logits of the last token and apply temperature
+        #     logits = logits[:, -1, :] / (temperature+1e-20) #to avoid 0 division error if temperature = 0.0
+        #     #optinally choose only the top_k tokens
+        #     if top_k is not None:
+        #         v,_ = torch.topk(logits, min(top_k, logits.size(-1)))
+        #         logits[logits<v[:, [-1]]] = -float('Inf')
+        #     #apply softmax to convert logits to (normalized) probabilities
+        #     probs = F.softmax(logits, dim = -1)
+        #     #sample from the distribution
+        #     idx_next = torch.multinomial(probs, num_samples=1) if temperature>0 else torch.argmax(probs, dim = -1) #greedy search if temperature is 0
+            
+        #     #Pag: if return_logprobs is True, we need to return the logprobs of the generated tokens, and check if the token is greedy sampled or not
+        #     if return_logprobs:
+        #         logprobs = np.append(logprobs, torch.log(probs[torch.arange(probs.shape[0]), idx_next.squeeze()]).cpu().numpy())
+        #         self.is_greedy = self.is_greedy and torch.argmax(probs, dim = -1) == idx_next.squeeze()
+                
+                
+        #     #append sampled index to the running sequence and continue
+        #     idx = torch.cat((idx, idx_next), dim = 1)
+        
+        
+        # if return_logprobs: return logprobs
+        # ret =  idx if return_input else idx[:, -max_new_tokens:]
+        # if ret_type == 'str': ret = self.tokenizer.decode(ret)
+        # return ret
     
     
     
