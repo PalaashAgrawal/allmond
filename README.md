@@ -19,7 +19,7 @@ This repo is a very _clean pythonic implementation_ of LLM pipelines.
 - _Clean_ also means that training scripts are very minimal, which is a result of high level abstractions. This ensures you don't have to scroll through unnecessary code. 
 
 
-Without going into much details here to keep this README concise, see [here](/.docs/whatMakesThisRepoUnique.md) for more details and design choice justifications. 
+Without going into much details here to keep this README concise, see [here](/docs/whatMakesThisRepoUnique.md) for more details and design choice justifications. 
 
 ## Key Features of this repo
 
@@ -100,7 +100,7 @@ Without going into much details here to keep this README concise, see [here](/.d
   - which machine is the main machine, 
   - whether you want DDP or FSDP based distributed training, etc. 
 
-Navigate to [this](.docs/accelerate.md) document for details.
+Navigate to [this](docs/accelerate.md) document for details.
 
 
 - Next, simply run
@@ -116,7 +116,7 @@ Navigate to [this](.docs/accelerate.md) document for details.
 
 - [W&B](https://wandb.ai/) logging
 
-    -  There is a very short process you need to first carry out to setup W&B your system. Navigate to [this](.docs/wandb.md) document for deets.
+    -  There is a very short process you need to first carry out to setup W&B your system. Navigate to [this](docs/wandb.md) document for deets.
     
     - Edit `train.py`
         Set `log_wandb` to `True`. 
@@ -138,16 +138,11 @@ See `data/README.md` to see guidelines of downloading custom datasets from huggi
 - If you wish to introduce changes to the training process itself (including optimization strategy, grad accumulation, etc etc), you need to do that using the Learner Class. Visit [fast.ai documentation](https://docs.fast.ai/) to explore this. For people unfamiliar with fast.ai, just open a github issue, I'll try to look into it and incorporate it as a training option. 
 
 ## TODO
-See [this document](.docs/TODO.md)
+See [this document](docs/TODO.md)
 
 
 ## Known Issues
-1. CUDA version 12.3, and/or Driver Version: 525.x doesn't seem to work well with the NCCL framework. Apparantly, data can't be synchronized between GPUs via P2P. 
-
-- However, updating to the Hardware Config mentioned in Prerequisites works well. I personally find [this](https://www.gpu-mart.com/blog/update-nvidia-drivers-on-windows-linux) guide the easiest way to update your NVIDIA drivers. 
-    
-- If you are not willing to do that, one way to get around this (although training is much slower), is to disable P2P sharing, which means, data will be synchronized via CPU. Do this by setting env variable in the main python script (train.py) `os.environ['NCCL_P2P_LEVEL']='NVL'`. 
-
+see [this document](docs/knownIssues.md)
 
 
 ## Cite
