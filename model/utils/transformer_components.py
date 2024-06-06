@@ -32,13 +32,31 @@ class MultiHeadSelfAttention(nn.Module):
             assert batch_first, 'Causal attention is only implemented for batch_first = True'
             self.register_buffer('causal_mask', torch.tril(torch.ones(block_size, block_size)))
             
+    @torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False)
+    def forward(self, x, attention_mask=None):
+        batch_size, seq_length, _ = x.size()
         
-    def forward(self, x):
-        attn_mask = self.causal_mask if self.is_causal else None
-        # print(attn_mask)
+        # Create the causal mask if required
+        if self.is_causal: causal_mask = self.causal_mask[:seq_length, :seq_length]  # (seq_length, seq_length)
+        else: causal_mask = None
         
-        k,q,v = self.k(x), self.q(x), self.v(x) #B, T, n_embd
-        return self.multiheadattn(q, k, v, attn_mask = attn_mask)
+        # Combine causal mask and attention mask if necessary
+        if attention_mask is not None:
+            attention_mask = attention_mask.expand(batch_size, seq_length, seq_length)  # (batch_size, seq_length, seq_length)
+            if causal_mask is not None:
+                attention_mask = causal_mask.unsqueeze(0) * attention_mask
+            # else:
+            #     attention_mask = attention_mask
+        else:
+            attention_mask = causal_mask.unsqueeze(0) if causal_mask is not None else None
+        
+        if attention_mask is not None:
+            attention_mask = attention_mask.unsqueeze(1)  # (batch_size, 1, seq_length, seq_length)
+            attention_mask = attention_mask.expand(batch_size, self.multiheadattn.num_heads, seq_length, seq_length)  # (batch_size, num_heads, seq_length, seq_length)
+            attention_mask = attention_mask.reshape(batch_size * self.multiheadattn.num_heads, seq_length, seq_length)  # (batch_size * num_heads, seq_length, seq_length)
+        
+        k, q, v = self.k(x), self.q(x), self.v(x)  # B, T, n_embd
+        return self.multiheadattn(q, k, v, attn_mask=attention_mask)
     
         
         
@@ -85,8 +103,8 @@ class TransformerBlock(nn.Module):
         self.layernorm2 = nn.LayerNorm(n_embd, bias = bias)
         self.mlp = MLP(n_embd, dropout = dropout, bias = bias)
         
-    
-    def forward(self, x, ):
+    @torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False)
+    def forward(self, x, attention_mask = None ):
         """
         Forward pass for the transformer block.
         if apply_causal_mask is True, then the attention layer will only attend to the previous tokens, not the future tokens.
@@ -94,7 +112,7 @@ class TransformerBlock(nn.Module):
         TODO: should flash attention be enabled once globally in GPT.forward() or should it be applied in each transformer block?
         """
         # with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False):
-        x = x + self.attn(self.layernorm1(x))[0] #pre-normalization
+        x = x + self.attn(self.layernorm1(x), attention_mask = attention_mask)[0] #pre-normalization
         x = x + self.mlp(self.layernorm2(x)) 
         return x            
         

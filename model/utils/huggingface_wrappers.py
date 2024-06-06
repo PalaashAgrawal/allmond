@@ -2,7 +2,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 from torch import nn
 import torch
 from functools import wraps
-from .tokenizer import Tokenizer    
+from ..tokenizer import Tokenizer    
 from accelerate import PartialState
 import os
 import logging
@@ -155,7 +155,7 @@ class HuggingfaceModelWrappers(HuggingFaceModelLoader):
 
         _model, cfg, tokenizer = self.get_hf_components(model_identifier, **kwargs)
         tokenizer.n_vocab = len(tokenizer.vocab) #get_vocab_size does not account for special added tokens, somehow. So we custom define the vocab size.
-        tokenizer = Tokenizer.from_huggingface(tokenizer, eot_token_name='eos_token_id', n_vocab_name='n_vocab') #instance of our custom defined Tokenizer class
+        tokenizer = Tokenizer.from_huggingface(tokenizer, eot_token_name='eos_token_id', n_vocab_name='n_vocab', pad_token_name = 'pad_token_id') #instance of our custom defined Tokenizer class
 
         #encoder and decoder functions already defined. 
         

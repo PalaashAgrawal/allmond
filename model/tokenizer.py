@@ -113,6 +113,7 @@ class Tokenizer(BaseTokenizer):
         
         self.n_vocab = self.encoder.n_vocab #required
         self.eot_token = self.encoder.eot_token #required. eot_token is an integer (not string)
+        self.pad_token = self.eot_token #setting as eot_token. Tiktoken doesnt explicitly have a pad token. Doesnt matter. Anyways, we will ignore the padded tokens in the forward function. 
     
     
     
@@ -179,7 +180,8 @@ class Tokenizer(BaseTokenizer):
     @check_huggingface_tokenizer_validity
     def from_huggingface(self, hf_tokenizer: AutoTokenizer, 
                          eot_token_name = 'eos_token',
-                         n_vocab_name = 'vocab_size',):
+                         n_vocab_name = 'vocab_size',
+                         pad_token_name = 'pad_token_id'):
         """
         Create a Tokenizer object from a Huggingface tokenizer, which comes from huggingface_wrappers.py
         
@@ -190,12 +192,14 @@ class Tokenizer(BaseTokenizer):
         
         instance = Tokenizer.__new__(Tokenizer)
         
-        assert hasattr(hf_tokenizer, eot_token_name), f"{eot_token_name} not found in {hf_tokenizer}. The corresponding EOT token must be by a different name."
-        assert hasattr(hf_tokenizer, n_vocab_name), f"{n_vocab_name} not found in {hf_tokenizer}. The corresponding vocabulary size must be by a different name." 
+        assert hasattr(hf_tokenizer, eot_token_name), f"EOT token {eot_token_name} not found in {hf_tokenizer}. The corresponding EOT token must be by a different name. Please find that and pass it as a kwarg."
+        assert hasattr(hf_tokenizer, n_vocab_name), f"vocab length {n_vocab_name} not found in {hf_tokenizer}. The corresponding vocabulary size must be by a different name. Please find that and pass it as a kwarg" 
+        assert hasattr(hf_tokenizer, pad_token_name), f"Padding token {pad_token_name} not found in {hf_tokenizer}. The corresponding pad token must be by a different name. Please find that and pass it as a kwarg" 
          
         instance.module = hf_tokenizer #the hugginface tokenizer is saved in the class by the name "module"
         instance.eot_token = getattr(hf_tokenizer, eot_token_name)
         instance.n_vocab = getattr(hf_tokenizer, n_vocab_name)
+        instance.pad_token = getattr(hf_tokenizer, pad_token_name)
         instance.encoder_model = hf_tokenizer.__class__.__name__
         
         
