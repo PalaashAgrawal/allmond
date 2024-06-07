@@ -52,7 +52,6 @@ class HuggingFaceModelLoader:
             """
         
             model =  self._get_QLoRA_model(model_identifier, **kwargs) if enable_qlora else AutoModelForCausalLM.from_pretrained(model_identifier, trust_remote_code = True,  device_map={"": PartialState().process_index})    
-            print(next(model.parameters()).device, 'device at loading')
     
             cfg = AutoConfig.from_pretrained(model_identifier, trust_remote_code = True)
             tokenizer = AutoTokenizer.from_pretrained(tokenizer_identifier if tokenizer_identifier else model_identifier, trust_remote_code = True)

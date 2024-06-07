@@ -7,6 +7,10 @@ from .eval.eval import evalBase
 from .tokenizer import Tokenizer
 from .utils.all import GenerationBase, HuggingfaceModelWrappers, TransformerBlock
 
+from lm_eval.evaluator import simple_evaluate
+from lm_eval.utils import make_table
+import json
+from pathlib import Path
 
 class gptBase(HuggingfaceModelWrappers, evalBase, GenerationBase):
 
@@ -123,7 +127,7 @@ class GPT(nn.Module, gptBase):
         f'implentation of the forward function for the generic GPT class.'
         f'Educational Note: as you see, this function in invariant to the sequence length. The only reason padding is done, is so that input sequences can be processed in batches.'
         
-        bs,t = idx.shape #idx = b,t
+        _,t = idx.shape #idx = b,t
         assert t<=self.block_size, f'Cannot forward -- model block size is exhausted. Model block size is {self.block_size}, but input sequence length is {t}.'
         pos = torch.arange(t, dtype = torch.long, device = idx.device) #shape (t,)
         
@@ -213,6 +217,28 @@ class GPT(nn.Module, gptBase):
         
         
         return instance
+    
+    def evaluate(self, tasks:list[str], save_path = None):
+        """
+        run model evaluation on bencharks (as defined by Eleuther AI's lm-evaluation-harness)
+        define your tasks as list of strings
+        
+        save results as dict (json) at `save_path` for later visualization. Defaults to None
+        if save_path is None: results are not saved, but still displayed as a table
+        """
+        #insert assertions to verify if strings in benchmarks is valid
+        #TODO: make this cleaner. save_path should automatically be sourced from Learner's save paths/model_dir
+        results = simple_evaluate(self, tasks = tasks)
+        if save_path is not None:
+            pth = Path(save_path)/f'{str(self)}_eval.json'
+        print('saving results at', pth)
+        with open(pth, 'w') as f: json.dump(results, f)
+        
+        print(make_table(results))
+        
+
+        
+        
     
     
         
