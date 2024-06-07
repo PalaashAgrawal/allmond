@@ -13,6 +13,7 @@ def check_huggingface_tokenizer_validity(func):
         #check if tokenizer has attributes eot_tojen, n_vocab, and functions encode, decode, tokenize_dataset
         assert hasattr(tokenizer, 'eot_token'), f"Tokenizer must have an attribute eot_token, which is the end-of-text token. This is used for encoding and decoding text. "
         assert hasattr(tokenizer, 'n_vocab'), f"Tokenizer must have an attribute n_vocab, which is the vocabulary size. This is used for encoding and decoding text. "
+        assert hasattr(tokenizer, 'pad_token'), f"Tokenizer must have an attribute pad_token, which is the padding token used to create attention mask for sequences shorter than context length. You may set it as eot_token, or dedicate a separate token for this. "
         assert hasattr(tokenizer, 'encoder_model'), f"Tokenizer must have an attribute encoder_model, which is the name of the underlying encoding model. This is used for loading dataset from disk"
         assert hasattr(tokenizer, 'encode'), f"Tokenizer must have a method encode, which is used for encoding text. "
         assert hasattr(tokenizer, 'decode'), f"Tokenizer must have a method decode, which is used for decoding text. "
