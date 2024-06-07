@@ -1,8 +1,13 @@
+import sys
+import os
+
+# Add the parent directory to the system path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
 from data.unlabeled import download_dataset
 from data.loader import memmapDL, distributedMemmapDL
-
 from model.gpt import GPT
-
 from learner.callbacks import save_checkpoints
 from learner.LLMLearner import LLMLearner
 

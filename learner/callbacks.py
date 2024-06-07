@@ -85,19 +85,25 @@ class save_checkpoints(Callback):
 
 
 class qlora_resolve(Callback):
+    """
+    This Callback is essential to run before running any QLORA models. 
+    Essentially, here we introduce minor Changes in the remove_hook_from_module from `accelerater.hooks.py`. 
+    Why is this necessary?
+    By default, accelerate runs the AlignDevicesHook on top of your model to ensure model is in the correct device. 
+    But For Quantized modes, this function creates a lot of problems. Specifically, it doesnt remove the AlignDevicesHook hook from the model automatically after running an interation. 
+    This hook somehow misaligns the input to LLM and the model (it always puts the input to cuda:0)
+    So we have to remove the hook using this function by force.
+     
+    But the problem is that, delattr, for some reason, doesnt remove the hook from the model (this is a bug from Huggingface. OR It may just be an issue related to quantization).
+    So we do a few changes (like first reassigning the variables, and then deleting them) to remove the hook.
+        
+    """
     
     def __init__(self, enable_qlora = True):
         self.enable_qlora = enable_qlora
         
     def remove_hook_from_module(self, module: nn.Module, recurse = False):
-        """
-        Minor Changes in the remove_hook_from_module from `accelerater.hooks.py`
-        For Quantized modes, this function creates a lot of problems. Specifically, it doesnt remove the AlignDevicesHook hook from the model. 
-        This hook somehow misaligns the input to LLM and the model (it always puts the input to cuda:0)
-        So we have to remove the hook using this function. 
-        But the problem is that, delattr, for some reason, doesnt remove the hook from the model.
-        So we do a few changes (like first reassigning the variables, and then deleting them) to remove the hook.
-        """
+       
         
         try:
             from accelerate.hooks import AlignDevicesHook

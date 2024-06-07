@@ -6,9 +6,13 @@
 - ~~CPU Offloading in FSDP.~~
 - ~~(HIGH PRIORITY) QLoRA (instead of (2). Quantization during training isnt without LoRA doesnt make sense, because gradients will be zero) (IS IT EVEN REQUIRED FOR SMALLER MODELS?)~~
     - FDSP+QLoRA Support (Currently, we train QLoRA in DDP mode)
+- ~~Evaluation on benchmarks ([eleutherAI/lm-harness](https://github.com/EleutherAI/lm-evaluation-harness))~~
 
+- ~~TASK: generation on hf models is running on CPU. WHy???~~
+- Create clean API for evaluation 
 - (TOP PRIORITY) Instruct Finetuning of model
-- (TOP PRIORITY) Evaluation on benchmarks ([eleutherAI/lm-harness](https://github.com/EleutherAI/lm-evaluation-harness))
+
+
 - Combining multiple datasets for training? 
 - Tokenize and collate on the fly (you shouldnt have to save on disk)
 - (TOP PRIORITY) gradient checkpointing?

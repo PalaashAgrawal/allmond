@@ -1,3 +1,10 @@
+import sys
+import os
+
+# Add the parent directory to the system path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
 from data.unlabeled import download_dataset
 from data.loader import memmapDL, distributedMemmapDL
 
@@ -14,7 +21,7 @@ import wandb
 #________________________________________wandb____________________________________________
 log_wandb = False #set to False if you dont want to log progress to W&B
 
-project = 'tinylm'
+project = 'tinylm' #for wandb
 dataset = "wikisimple"
 mode = 'scratch'
 # ________________________________________hyperparams and settings_________________________
