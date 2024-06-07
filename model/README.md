@@ -4,11 +4,25 @@ Standard GPT architecture based on Karpathy's NanoGPT code.
 
 Use the `GPT` class to define a pytorch based model. 
 
+- `gpt.py` brings together the components to build a standard GPT architecture. 
+- Corresponding to `gpt.py`, there are a few util files that contain key functions
 
+    - `transformer_components.py` contains various standard blocks used in a transformer architecture. You can use them, along with custom Implementations to create a custom model architecture class. 
+
+    - `huggingface_wrappers.py`
+        - You can also import pretrained models from huggingface. Class `GPT` (in `gpt.py`) will automatically wrap the model to the standard format (i.e., the format expected by the trainer class).
+        - For any huggingface model, you only have to create a wrapper in `huggingface_wrappers.py` under the `HF_base` class. Simply return the huggingface model with a config dict (which are stored as attributes in the GPT class). 
+        - (In progress), I'm adding model support slowly, but you can always create your own custom model definition
+    
+    - `generation.py`
+        - Contains helpers related to generation (inference). Generation is key not only for independent inference, but also for evaluation (our evaluation harness uses the generate function to check model performance). 
+
+- `eval` directory
+    - `eval.py` contains core functions (like `loglikelhood`, which are expected by lm-evaluation-harness for benchmark evaluation) for evaluation purposes. We also use this directory to install Eleuther-AI's lm-evaluation-harness during model setup, so that necessary functions can be imported and used. 
 
 ### To Customize the Model
 
-- `transformer_components.py` contains various standard blocks used in a transformer architecture. You can use them, along with custom Implementations to create a custom model architecture class. 
+
 
 - `gpt.py` brings together the components to build a standard GPT architecture. 
 
@@ -22,10 +36,6 @@ Use the `GPT` class to define a pytorch based model.
     - Should preferably include a `get_num_params` function, to calculate number of trainable parameters in the model. As you know, larger models can easily lead to CUDA OOM errors. So for larger models, you would have to adjust batch_size or block_size (context window length)
     - Should preferably include a `model_name` attribute (string) that the function can use to log to wandb (say, if you're experimenting with different model variations). 
 
-- `huggingface_wrappers.py`
-    - You can also import pretrained models from huggingface. Class `GPT` (in `gpt.py`) will automatically wrap the model to the standard format (i.e., the format expected by the trainer class).
-    - For any huggingface model, you only have to create a wrapper in `huggingface_wrappers.py` under the `HF_base` class. Simply return the huggingface model with a config dict (which are stored as attributes in the GPT class). 
-    - (In progress), I'm adding model support slowly, but you can always create your own custom model definition
 
 
 
@@ -37,4 +47,5 @@ Use the `GPT` class to define a pytorch based model.
     - This means that in your main script, you pass a tokenizer as `model.tokenizer` instead of a custom defined tokenizer. 
     - By default (a standard GPT architecture) will use a TikToken Tokenizer. You can define which model's tokenizer you wish to use (as supported by TikToken)
     - TODO: create functionality for custom tokenizer, even for default GPT based architectures. 
-    
+
+- I decided to reorganze many util files inside a separate `utils` directory

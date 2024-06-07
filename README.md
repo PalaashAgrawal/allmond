@@ -84,7 +84,9 @@ Without going into much details here to keep this README concise, see [here](/do
 
 #### Software
 - Python 3.10 (preferably in a Conda environment)
-- Install necessary libraries: `pip install -r requirements.txt`
+- Setup the repo requirements using `sh setup.sh`. 
+  - You can also manually install necessary libraries: `pip install -r requirements.txt`.
+  - However, `setup.sh` also installs some other dependencies like lm-evaluation-harness for benchmark evaluation. So we recommend this. 
 
 ## Run LLM Training
 
@@ -140,7 +142,8 @@ See `data/README.md` to see guidelines of downloading custom datasets from huggi
 - If you wish to introduce changes to the training process itself (including optimization strategy, grad accumulation, etc etc), you need to do that using the Learner Class. Visit [fast.ai documentation](https://docs.fast.ai/) to explore this. For people unfamiliar with fast.ai, just open a github issue, I'll try to look into it and incorporate it as a training option. 
 
 ## Evaluate Your Models. 
-- To evaluate your models on benchmarks, we have an `evaluate` function in our model class, where you simply need to provide the names of the benchmarks as a list of strings (eg   `['mmlu', 'boolq']`), and get results as a table in the CLI, and optionally as a saved json dictionary (for future visualization). See docstring inside the `gpt.py` inside `model` directory.    
+- To evaluate your models on benchmarks, we have an `evaluate` function in our model class, where you simply need to provide the names of the benchmarks as a list of strings (eg   `['mmlu', 'boolq']`), and get results as a table in the CLI, and optionally as a saved json dictionary (for future visualization). See docstring inside the `gpt.py` inside `model` directory. 
+- Before running evaluation, make sure you have installed lm-evaluation-harness in dev mode. If you setup this repo using `setup.sh`, it will automatically do taht for you.    
 
 
 ## TODO
