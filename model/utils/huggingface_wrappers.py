@@ -51,7 +51,9 @@ class HuggingFaceModelLoader:
 
             """
         
-            model =  self._get_QLoRA_model(model_identifier, **kwargs) if enable_qlora else AutoModelForCausalLM.from_pretrained(model_identifier, trust_remote_code = True)        
+            model =  self._get_QLoRA_model(model_identifier, **kwargs) if enable_qlora else AutoModelForCausalLM.from_pretrained(model_identifier, trust_remote_code = True,  device_map={"": PartialState().process_index})    
+            print(next(model.parameters()).device, 'device at loading')
+    
             cfg = AutoConfig.from_pretrained(model_identifier, trust_remote_code = True)
             tokenizer = AutoTokenizer.from_pretrained(tokenizer_identifier if tokenizer_identifier else model_identifier, trust_remote_code = True)
             
@@ -123,6 +125,7 @@ class HuggingFaceModelLoader:
         model = AutoModelForCausalLM.from_pretrained(model_identifier, trust_remote_code=True, quantization_config=bnb_config, low_cpu_mem_usage = True, 
                                                     device_map={"": PartialState().process_index}, #see https://github.com/artidoro/qlora/issues/186#issuecomment-1943045599
                                                      )  # Internally uses bitsandbytes
+        
         # Prepare model for kbit quantization
         model = prepare_model_for_kbit_training(model)
         # Get LoRA model

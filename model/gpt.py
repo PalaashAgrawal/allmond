@@ -171,7 +171,7 @@ class GPT(nn.Module, gptBase):
                    'large': 'gpt2-large',
                    'xl':    'gpt2-xl' 
                    }
-        assert model_type in supported_models, f'Unsupported model type. Supported variant model types are: {supported_models}'
+        assert model_type in supported_models or model_type in aliases, f'Unsupported model type. Supported variant model types are: {supported_models}'
         if override_args is None: override_args = {} 
         assert all(k=='dropout' for k in override_args) #only dropout is overridable for now. According to Karpathy's repo. 
         

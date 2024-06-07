@@ -96,7 +96,7 @@ class GenerationBase:
         2. does it work for temperture 0 
         3. does it work for top_k
         
-        4. why doesnt it use GPU?
+        4. why doesnt it use GPU? only for HF model. s
         
         """
         
