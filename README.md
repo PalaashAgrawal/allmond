@@ -18,7 +18,6 @@ This repo is a very _clean pythonic implementation_ of LLM pipelines.
 - _Clean_ means that different components are clearly separated, and initialized using intuitive function arguments. 
 - _Clean_ also means that training scripts are very minimal, which is a result of high level abstractions. This ensures you don't have to scroll through unnecessary code. 
 
-
 Without going into much details here to keep this README concise, see [here](/docs/whatMakesThisRepoUnique.md) for more details and design choice justifications. 
 
 ## Key Features of this repo
@@ -28,8 +27,10 @@ Without going into much details here to keep this README concise, see [here](/do
 - Define custom architectures, or download any HF model (for continual pretraining).
 - Automatic setup of Data, Model and Tokenizer using high-level APIs.
 - Easy setup of Distributed Training (single-GPU, DDP, FSDP, CPU Offloading etc.).
+- Finetune pretrained Huggingface models in (Q)LORA setting.
 - Inbuilt support for Mixed Precision Training.
 - Automatic checkpointing of Model based on best validation loss.
+- Evaluate models on benchmarks. 
 
 
 
@@ -56,6 +57,7 @@ Without going into much details here to keep this README concise, see [here](/do
 - Distributed Backend: NCCL
 - Progress Logging: Weights and Biases
 - Precision: bf16
+- Evaluation: Eleuther AI's lm-evaluation-harness backend
 
 </td>
 
@@ -136,6 +138,10 @@ See `data/README.md` to see guidelines of downloading custom datasets from huggi
 ### Customize Training process
 
 - If you wish to introduce changes to the training process itself (including optimization strategy, grad accumulation, etc etc), you need to do that using the Learner Class. Visit [fast.ai documentation](https://docs.fast.ai/) to explore this. For people unfamiliar with fast.ai, just open a github issue, I'll try to look into it and incorporate it as a training option. 
+
+## Evaluate Your Models. 
+- To evaluate your models on benchmarks, we have an `evaluate` function in our model class, where you simply need to provide the names of the benchmarks as a list of strings (eg   `['mmlu', 'boolq']`), and get results as a table in the CLI, and optionally as a saved json dictionary (for future visualization). See docstring inside the `gpt.py` inside `model` directory.    
+
 
 ## TODO
 See [this document](docs/TODO.md)
