@@ -7,11 +7,6 @@ from .eval.eval import evalBase
 from .tokenizer import Tokenizer
 from .utils.all import GenerationBase, HuggingfaceModelWrappers, TransformerBlock
 
-from lm_eval.evaluator import simple_evaluate
-from lm_eval.utils import make_table
-import json
-from pathlib import Path
-
 class gptBase(HuggingfaceModelWrappers, evalBase, GenerationBase):
 
     
@@ -165,7 +160,7 @@ class GPT(nn.Module, gptBase):
     @classmethod
     def as_variant(cls, model_type:str, override_args:dict = None):
         f'to TEST'
-        f"""
+        """
         used to create an instance of the GPT model with a specific configuration based on the model_type parameter. 
         The model_type should be one of the following: 'gpt2', 'gpt2-medium', 'gpt2-large', 'gpt2-xl'. 
         These correspond to different configurations of the GPT model with varying numbers of layers, embedding dimensions, heads, vocabulary size, block size, and whether to use bias or not.
@@ -193,7 +188,7 @@ class GPT(nn.Module, gptBase):
     
     @classmethod
     def from_hf(cls, model_identifier, enable_qlora:bool = False, **kwargs):
-        f"""Create an instance of the GPT model from a Huggingface model identifier. 
+        """Create an instance of the GPT model from a Huggingface model identifier. 
         The model_identifier should be a string that corresponds to a model in the Huggingface model hub.
         Basically this model will behave exactly like the GPT class, except that the model parameters will be loaded from the Huggingface model hub.
         
@@ -218,23 +213,7 @@ class GPT(nn.Module, gptBase):
         
         return instance
     
-    def evaluate(self, tasks:list[str], save_path = None):
-        """
-        run model evaluation on bencharks (as defined by Eleuther AI's lm-evaluation-harness)
-        define your tasks as list of strings
-        
-        save results as dict (json) at `save_path` for later visualization. Defaults to None
-        if save_path is None: results are not saved, but still displayed as a table
-        """
-        #insert assertions to verify if strings in benchmarks is valid
-        #TODO: make this cleaner. save_path should automatically be sourced from Learner's save paths/model_dir
-        results = simple_evaluate(self, tasks = tasks)
-        if save_path is not None:
-            pth = Path(save_path)/f'{str(self)}_eval.json'
-        print('saving results at', pth)
-        with open(pth, 'w') as f: json.dump(results, f)
-        
-        print(make_table(results))
+    
         
 
         
