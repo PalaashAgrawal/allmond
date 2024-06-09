@@ -56,6 +56,7 @@ class unlabeledDataset():
             #Assuming that datasets always returns "train" and "test"
             self.dataset = datasets.load_dataset(
                                                 self.config.dataset_name,
+                                                data_dir=self.cache_dir,
                                                 num_proc=self.n_proc,
                                                 trust_remote_code=True,
                                                 cache_dir=self.cache_dir,
