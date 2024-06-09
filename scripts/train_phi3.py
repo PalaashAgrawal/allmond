@@ -83,4 +83,4 @@ learn = LLMLearner(dls,
 learn.check_and_load_learner(check_and_save_model.checkpoint_name, device = rank_distrib() if num_distrib() else None) #initialize each learner to respective device
 
 with learn.distrib_ctx(): 
-    learn.fit_one_cycle(1, 1e-4)
+    learn.fit_one_cycle(1, 1e-4, find_largest_batch_size = True)

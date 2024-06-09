@@ -8,10 +8,10 @@ from lm_eval.utils import make_table
 from pathlib import Path
 from copy import deepcopy
 from typing import List
-from fastai.torch_core import rank_distrib, num_distrib
 import torch
 from tqdm import tqdm
 import json
+from fastai.torch_core import rank_distrib, num_distrib
 
 
 class evalUtils:
@@ -91,11 +91,7 @@ class evalUtils:
         a, b = pair
         return a[: len(a) - (len(b) - 1)], b
 
-    @property
-    def rank(self): return rank_distrib() #or 1
     
-    @property
-    def world_size(self): return num_distrib() or 1
     
     @property
     def eot_token_id(self): return self.tokenizer.eot_token
@@ -109,37 +105,11 @@ class evalUtils:
     
     def tok_encode(self, text): return self.tokenizer.encode(text)
 
-
+    
 
 
 class evalBase(LM, evalUtils):
     
-    def evaluate(self, tasks:list[str], save_path = None):
-        """
-        run model evaluation on bencharks (as defined by Eleuther AI's lm-evaluation-harness)
-        define your tasks as list of strings
-        
-        save results as dict (json) at `save_path` for later visualization. Defaults to None
-        if save_path is None: results are not saved, but still displayed as a table
-        """
-        #insert assertions to verify if strings in benchmarks is valid
-        #TODO: make this cleaner. save_path should automatically be sourced from Learner's save paths/model_dir
-        
-        print('running eval. This may take a few minutes just to setup...')    
-        results = simple_evaluate(self, tasks = tasks)
-        if save_path is not None:
-            pth = Path(save_path)/f'{str(self)}_eval.json'
-            print('saving results at', pth)
-            with open(pth, 'w') as f: json.dump(results, f)
-        
-        print(make_table(results))
-        
-        
-
-    
-    
-    
-
     @torch.no_grad()
     def loglikelihood(self, requests:list[Instance])-> list[tuple[float, bool]]:
         """
@@ -174,29 +144,7 @@ class evalBase(LM, evalUtils):
         - We will use the full max context length of the model.
         - For inputs that exceed the max context length, we divide the tokenized string into chunks of up to
         the max context length.
-        - IMPORTANT: Each document's loglikelihood/perplexity is computed *separately*, unlike other implementations
-          which may simply concatenate multiple documents together.
-        - IMPORTANT: We maximize the amount of context for each prediction. Specifically, for inputs that we break into
-          multiple chunks, the last input will still a full-sized context.
-          Example:
-            Input tokens: [ 0 1 2 3 4 5 6 7 8 9 ]
-            Prefix: BOS/EOS
-            Max context length: 4
-            Resulting input/prediction pairs:
-
-                INPUT:  BOS   0   1   2
-                PRED:     0   1   2   3
-
-                INPUT:    3   4   5   6
-                PRED:     4   5   6   7
-
-                INPUT:    5   6   7   8
-                PRED:             8   9
-
-          Observe that:
-            1. Each token is predicted exactly once
-            2. For the last pair, we provide the full context, but only score the last two tokens
-
+        
         :param requests: list[Instance]
             A list of Instance objects with property `args` which returns a tuple (context,).
             string: str
@@ -302,3 +250,67 @@ class evalBase(LM, evalUtils):
             res.append(generated_text)
 
         return res
+
+    def evaluate(self, tasks:list[str], save_path = None):
+        """
+        run model evaluation on bencharks (as defined by Eleuther AI's lm-evaluation-harness)
+        define your tasks as list of strings
+        
+        save results as dict (json) at `save_path` for later visualization. Defaults to None
+        if save_path is None: results are not saved, but still displayed as a table
+        """
+        #insert assertions to verify if strings in benchmarks is valid
+        #TODO: make this cleaner. save_path should automatically be sourced from Learner's save paths/model_dir
+        
+        print('running eval. This may take a few minutes just to setup...')    
+        results = simple_evaluate(self, tasks = tasks, batch_size = 'auto')
+        if save_path is not None:
+            pth = Path(save_path)/f'{str(self)}_eval.json'
+            print('saving results at', pth)
+            with open(pth, 'w') as f: json.dump(results, f)
+        
+        print(make_table(results))
+        
+    
+    
+    
+    def _detect_batch_size(self):
+        max_length = self.max_length
+
+        # Starting with a relatively high batch size and reducing it in case of OOM errors
+        batch_size = 64  # Initial batch size
+        step_size = 2  # Reduction factor in case of OOM
+
+        def can_allocate_memory(batch_size):
+            try:
+                # Create a dummy input to test memory allocation
+                test_batch = torch.ones((batch_size, max_length), device=self.device).long()
+                # Run a forward pass
+                self.generate(test_batch, max_new_tokens=0)
+                return True
+            except RuntimeError as e:
+                if "out of memory" in str(e):
+                    return False
+                else:
+                    raise e
+
+        # Adjust the batch size until it fits into memory
+        while batch_size > 0:
+            if can_allocate_memory(batch_size):
+                break
+            batch_size //= step_size
+
+        # Ensure at least one batch can be processed
+        return max(batch_size, 1)
+    
+    
+    
+        
+    @property
+    def rank(self): return rank_distrib()
+    
+    @property
+    def world_size(self): return num_distrib() or 1
+    
+    
+    

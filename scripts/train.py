@@ -30,7 +30,7 @@ dataset = "wikisimple"
 mode = 'scratch'
 # ________________________________________hyperparams and settings_________________________
 
-bs=1 #each GPU gets bs = 20, works good for a 24GB GPU
+bs=10 #each GPU gets bs = 1, works good for a 24GB GPU. Doesnt matter, we 
 # block_size = 512
 block_size = 512
 valid_sampler_size = 1000 #how many samples to use for validation. This is only used to check if validation loss is better than best_valid_loss, so that a checkpoint can be saved. Karpathy uses 200 random points
@@ -84,4 +84,4 @@ learn = LLMLearner(dls,
 #check and load previous checkpoint. Doesnt make sense to do it within the callback, because all callbacks are initialized in the Learner before they are even called
 learn.check_and_load_learner(check_and_save_model.checkpoint_name, device = rank_distrib() if num_distrib() else None) #initialize each learner to respective device
 
-with learn.distrib_ctx(): learn.fit_one_cycle(1, 1e-4)
+with learn.distrib_ctx(): learn.fit_one_cycle(1, 1e-4, find_largest_batch_size = True)

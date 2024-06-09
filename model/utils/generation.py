@@ -95,9 +95,7 @@ class GenerationBase:
         1. Check if the function returns the correct number of tokens
         2. does it work for temperture 0 
         3. does it work for top_k
-        
-        4. why doesnt it use GPU? only for HF model. s
-        
+            
         """
         
         #input can be a single string, single list of ints, list of strings, tensor of shape (b,t) or list of list of ints
@@ -136,8 +134,8 @@ class GenerationBase:
 
             idx = torch.cat((idx, idx_next), dim=1)
 
-        if return_logprobs:
-            return logprobs
+        if return_logprobs: return logprobs
+        
         ret = idx if return_input else idx[:, -max_new_tokens:]
         if self.ret_type == 'str':
             #covert ret tensor to list of ints (or list of list of ints if batched)

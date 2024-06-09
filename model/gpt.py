@@ -7,30 +7,16 @@ from .eval.eval import evalBase
 from .tokenizer import Tokenizer
 from .utils.all import GenerationBase, HuggingfaceModelWrappers, TransformerBlock
 
+
 class gptBase(HuggingfaceModelWrappers, evalBase, GenerationBase):
-
-    
-
     def __str__(self): 
         f'get model name along with number of parameters in millions/billions'
         def _format_number(num):
-            if num >= 1_000_000_000:
-                return f"{num / 1_000_000_000:.1f}B"
-            elif num >= 1_000_000:
-                return f"{num / 1_000_000:.1f}M"
-            else:
-                return str(num)
-        
-        model_name = self.model_name if hasattr(self,'model_name') else 'GPT'
-            
+            if num >= 1_000_000_000:    return f"{num / 1_000_000_000:.1f}B"
+            elif num >= 1_000_000:      return f"{num / 1_000_000:.1f}M"
+            else:                       return str(num)
+        model_name = self.model_name if hasattr(self,'model_name') else 'GPT'   
         return f'{model_name}-{_format_number(self.num_params)}'
-    
-    @property
-    def num_params(self):
-        return sum(p.numel() for p in self.parameters() if p.requires_grad)
-    
-    @property
-    def device(self): return next(self.parameters()).device
     
     def get_num_params(self, non_embedding=True):
         """
@@ -42,7 +28,7 @@ class gptBase(HuggingfaceModelWrappers, evalBase, GenerationBase):
         n_params = self.num_params
         assert hasattr(self, 'wpe') and isinstance(self.wpe, nn.Embedding), f'Positional Encoding Embedding (wpe) not defined in the model. Define `self.wpe` as a nn.Embedding'
         assert hasattr(self, 'wte') and isinstance(self.wte, nn.Embedding), f'Token Embedding layer (wte) not defined in the model. Define `self.wte` as a nn.Embedding'
-        
+
         if non_embedding: n_params-=self.wpe.weight.numel()
         params_excl_embeddings = n_params - self.wte.weight.numel()
         
@@ -59,8 +45,42 @@ class gptBase(HuggingfaceModelWrappers, evalBase, GenerationBase):
         for param_name, param in self.named_parameters():
             if param_name.endswith(('residual_fc.weight', 'residual_projection.weight')): param.div_(torch.sqrt(torch.tensor(2*self.n_layer)))
         
+    @property
+    def num_params(self): return sum(p.numel() for p in self.parameters() if p.requires_grad)
+    
+    @property
+    def device(self): return next(self.parameters()).device
     
     
+    def _detect_batch_size(self):
+        """
+        Detect largest batch size for training
+        """
+        max_length = self.block_size
+
+        # Starting with a relatively high batch size and reducing it in case of OOM errors
+        batch_size = 64  # Initial batch size
+        step_size = 2  # Reduction factor in case of OOM
+
+        def can_allocate_memory(batch_size):
+            try:
+                # Create a dummy input to test memory allocation
+                test_batch = torch.ones((batch_size, max_length), device=self.device).long()
+                # Run a forward pass
+                with torch.no_grad(): self(test_batch)
+                return True
+            except RuntimeError as e:
+                if "out of memory" in str(e).lower(): return False
+                else: raise e
+
+        # Adjust the batch size until it fits into memory
+        while batch_size > 0:
+            if can_allocate_memory(batch_size): break
+            batch_size //= step_size
+
+        # Ensure at least one batch can be processed
+        return max(batch_size, 1)
+        
 
     
 class GPT(nn.Module, gptBase):
@@ -197,7 +217,6 @@ class GPT(nn.Module, gptBase):
                 
         instance = cls.__new__(cls)
         super(cls, instance).__init__() #for nn.Module
-        
         instance.qlora = enable_qlora==True
         
         hf_model  = instance.get_hf_model(model_identifier, enable_qlora = enable_qlora)
@@ -208,8 +227,6 @@ class GPT(nn.Module, gptBase):
         instance.forward_fn = lambda x: instance.base_model(x).logits
         
         for key, value in kwargs.items(): setattr(instance, key, value)
-        
-        
         
         return instance
     

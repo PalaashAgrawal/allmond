@@ -2,6 +2,7 @@ from fastai.text.all import *
 from fastai.distributed import *
 from torch import nn
 
+
 class save_checkpoints(Callback):
 
     """
@@ -84,7 +85,7 @@ class save_checkpoints(Callback):
         
 
 
-class qlora_resolve(Callback):
+class QLORA_resolve(Callback):
     """
     This Callback is essential to run before running any QLORA models. 
     Essentially, here we introduce minor Changes in the remove_hook_from_module from `accelerater.hooks.py`. 
@@ -138,3 +139,113 @@ class qlora_resolve(Callback):
         if self.enable_qlora:
             self.learn.model.base_model = self.remove_hook_from_module(self.learn.model.base_model)
         
+
+
+
+#PAg: consider pushing to fastai PR
+class SkipToIter(Callback):
+    "Skip training up to   `iter`th iteration in `epoch`th epoch"
+    "if epoch and iter passed during initialization are not 0, they override values derived from loaded hyperparameters in learn.load"
+    order = 51
+    
+    def __init__(self, epoch:int, iter: int):
+        self._skip_to_epoch = epoch
+        self._skip_to_iter = iter
+        
+    def before_epoch(self):
+        if self.epoch < self._skip_to_epoch:
+            raise CancelEpochException
+        
+    def before_batch(self):
+        if self.iter < self._skip_to_iter:
+            raise CancelBatchException
+        
+
+
+# class get_largest_batch_size(Callback):
+#     order = 100 #we want this to be executed at the very end. At this point, model has been assigned to appropriate 
+    
+#     def get_largest_bs(self):
+#         if not getattr(self.learn, 'find_largest_batch_size', False): return 
+        
+#         # max_length = self.learn.model.block_size
+
+#         # Starting with a relatively high batch size and reducing it in case of OOM errors
+#         batch_size = 64  # Initial batch size
+#         step_size = 2  # Reduction factor in case of OOM
+
+#         def can_allocate_memory(batch_size):
+#             try:
+#                 # Create a dummy input to test memory allocation
+#                 dl = self.learn.dls.train
+#                 dl.bs = batch_size*2 #since we run the model using torch.no_grad, which uses half the memory 
+#                 x_test,y_test = next(iter(dl))
+#                 # Run a forward pass
+#                 output = self.learn.model(x_test)
+#                 loss = self.learn.loss_func(output, y_test)
+#                 loss.backward()
+#                 return True
+#             except RuntimeError as e:
+#                 if "out of memory" in str(e).lower(): return False
+#                 else: raise e
+#             finally:
+#                 self.learn.opt.zero_grad()
+
+#         # Adjust the batch size until it fits into memory
+#         while batch_size > 0:
+#             if can_allocate_memory(batch_size): break
+#             batch_size-= step_size
+
+#         # Ensure at least one batch can be processed
+#         return max(batch_size, 1)
+    
+    
+#     def before_fit(self):
+#         if not rank_distrib(): print('Calculating maximum batch_size that can fit the device...')
+#         bs = self.get_largest_bs()
+#         if bs is not None: 
+#             print(f'Detected largest batch_size = {bs}')
+#             for dl in self.dls: dl.bs = bs
+    
+class get_largest_batch_size(Callback):
+    order = 100  # we want this to be executed at the very end. At this point, model has been assigned to appropriate 
+    max_bs = 64
+    def get_largest_bs(self):
+        
+        def can_allocate_memory(batch_size):
+            try:
+                model = self.learn.model 
+                dl = self.learn.dls.train
+                dl.bs = batch_size  # Testing with the current batch size
+                
+                x_test, y_test = next(iter(dl))
+                # Run a forward pass
+                output = model(x_test)
+                loss = self.learn.loss_func(output, y_test)
+                loss.backward()
+                return True
+            except RuntimeError as e:
+                
+                if "out of memory" in str(e): 
+                    return False
+                else: raise e
+            finally:
+                self.learn.opt.zero_grad()
+
+        # Start with a batch size of 2 and increase in powers of 2
+        batch_size = 1
+        while can_allocate_memory(batch_size): batch_size *= 2
+
+        # Decrement phase: fine-tune the batch '/  tsize by decreasing in steps of 1
+        while not can_allocate_memory(batch_size) and batch_size > 1: batch_size-=1
+
+        # Ensure at least one batch can be processed
+        final_batch_size =  max(batch_size, 1)
+        return final_batch_size
+
+    def before_fit(self):
+        print(f'Calculating maximum batch_size that can fit the device {self.learn.model.device}')
+        bs = self.get_largest_bs()
+        if bs is not None:
+            print(f'Detected largest batch_size to fit {self.learn.model.device} = {bs}')
+            for dl in self.dls.loaders: dl.bs = bs

@@ -96,7 +96,6 @@ class memmapDL(DataLoader):
             
             
             if self._device_type == 'cuda':
-            # if 'cuda' in self.device:
                 # Pin arrays x and y for asynchronous GPU transfer
                 x, y = x.pin_memory().to(self.device, non_blocking=True), y.pin_memory().to(self.device, non_blocking=True)
             else:
@@ -104,10 +103,7 @@ class memmapDL(DataLoader):
             b = (x,y)
             # if self.device is not None: b = to_device(b, self.device)
             yield self.after_batch(b)
-        
-        
-            # yield x, y  # Yield the batches instead of returning them
-            
+
         self.after_iter()
         if hasattr(self, 'it'): del(self.it)
         
@@ -122,8 +118,14 @@ class memmapDL(DataLoader):
 class distributedMemmapDL(DistributedDL):
     _default='dl' #in the parent class(es), _default is dataset. which is not defined in our case
     
-    def __iter__(self):
-        return iter(self.dl)
+    def __iter__(self): return iter(self.dl)
+    
+    #for finding maximum batch size that can fit the device, we need to access bs. But a DistributedDL has a separate attribute bs, which is not the same as the bs attribute of the dl(memmapDL). So we create a property to access the bs attribute of the dl directly, that can also be set directly.
+    @property
+    def bs(self): return self.dl.bs
+    
+    @bs.setter
+    def bs(self, v): self.dl.bs = v
 
 
 
