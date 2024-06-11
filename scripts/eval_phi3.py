@@ -6,5 +6,8 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.gpt import GPT
 
+
+
 model = GPT.from_hf('microsoft/Phi-3-mini-4k-instruct', enable_qlora = False)
-model.evaluate(tasks = ['mmlu_stem'])
+model.evaluate(tasks = ['mmlu_high_school_computer_science'])
+

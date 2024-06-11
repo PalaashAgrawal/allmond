@@ -6,8 +6,8 @@ import torch
 from .eval.eval import evalBase
 from .tokenizer import Tokenizer
 from .utils.all import GenerationBase, HuggingfaceModelWrappers, TransformerBlock
-
-
+        
+        
 class gptBase(HuggingfaceModelWrappers, evalBase, GenerationBase):
     def __str__(self): 
         f'get model name along with number of parameters in millions/billions'
@@ -52,36 +52,38 @@ class gptBase(HuggingfaceModelWrappers, evalBase, GenerationBase):
     def device(self): return next(self.parameters()).device
     
     
-    def _detect_batch_size(self):
-        """
-        Detect largest batch size for training
-        """
-        max_length = self.block_size
+    
+    
+    # def _detect_batch_size(self):
+    #     """
+    #     Detect largest batch size for training
+    #     """
+    #     max_length = self.block_size
 
-        # Starting with a relatively high batch size and reducing it in case of OOM errors
-        batch_size = 64  # Initial batch size
-        step_size = 2  # Reduction factor in case of OOM
+    #     # Starting with a relatively high batch size and reducing it in case of OOM errors
+    #     batch_size = 64  # Initial batch size
+    #     step_size = 2  # Reduction factor in case of OOM
 
-        def can_allocate_memory(batch_size):
-            try:
-                # Create a dummy input to test memory allocation
-                test_batch = torch.ones((batch_size, max_length), device=self.device).long()
-                # Run a forward pass
-                with torch.no_grad(): self(test_batch)
-                return True
-            except RuntimeError as e:
-                if "out of memory" in str(e).lower(): return False
-                else: raise e
+    #     def can_allocate_memory(batch_size):
+    #         try:
+    #             # Create a dummy input to test memory allocation
+    #             test_batch = torch.ones((batch_size, max_length), device=self.device).long()
+    #             # Run a forward pass
+    #             with torch.no_grad(): self(test_batch)
+    #             return True
+    #         except RuntimeError as e:
+    #             if "out of memory" in str(e).lower(): return False
+    #             else: raise e
 
-        # Adjust the batch size until it fits into memory
-        while batch_size > 0:
-            if can_allocate_memory(batch_size): break
-            batch_size //= step_size
+    #     # Adjust the batch size until it fits into memory
+    #     while batch_size > 0:
+    #         if can_allocate_memory(batch_size): break
+    #         batch_size //= step_size
 
-        # Ensure at least one batch can be processed
-        return max(batch_size, 1)
+    #     # Ensure at least one batch can be processed
+    #     return max(batch_size, 1)
         
-
+    
     
 class GPT(nn.Module, gptBase):
     
@@ -134,9 +136,7 @@ class GPT(nn.Module, gptBase):
         self._residual_init_weights() #per GPT2 paper
         self.tokenizer = Tokenizer(tokenizer_from)
         self.forward_fn = self._gpt_forward_impl #we separately define forward_fn so that custom defined huggingface models can easily implement their forwarding.
-        
-        
-        
+                
         
     def _gpt_forward_impl(self, idx):
         f'implentation of the forward function for the generic GPT class.'
@@ -149,9 +149,6 @@ class GPT(nn.Module, gptBase):
         x = self.wpe(pos) + self.wte(idx) #t,n_embd + b,t,n_embd --> b,t,n_embd
         x = self.dropout(x) #b,t,n_embd
         
-        
-        # attention_mask = (idx != self.tokenizer.pad_token).float().unsqueeze(1).unsqueeze(2)  # shape (batch_size, 1, 1, sequence_length)
-        # attention_mask = attention_mask.expand(-1, -1, t, -1)  # shape (batch_size, 1, sequence_length, sequence_length)
          # Create attention mask
         attention_mask = (idx != self.tokenizer.pad_token).float().unsqueeze(1)# shape (batch_size, 1, sequence_length)
         attention_mask = attention_mask.expand(-1, t, -1)  # shape (batch_size, seq_length, seq_length)
