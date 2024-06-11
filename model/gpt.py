@@ -51,38 +51,7 @@ class gptBase(HuggingfaceModelWrappers, evalBase, GenerationBase):
     @property
     def device(self): return next(self.parameters()).device
     
-    
-    
-    
-    # def _detect_batch_size(self):
-    #     """
-    #     Detect largest batch size for training
-    #     """
-    #     max_length = self.block_size
 
-    #     # Starting with a relatively high batch size and reducing it in case of OOM errors
-    #     batch_size = 64  # Initial batch size
-    #     step_size = 2  # Reduction factor in case of OOM
-
-    #     def can_allocate_memory(batch_size):
-    #         try:
-    #             # Create a dummy input to test memory allocation
-    #             test_batch = torch.ones((batch_size, max_length), device=self.device).long()
-    #             # Run a forward pass
-    #             with torch.no_grad(): self(test_batch)
-    #             return True
-    #         except RuntimeError as e:
-    #             if "out of memory" in str(e).lower(): return False
-    #             else: raise e
-
-    #     # Adjust the batch size until it fits into memory
-    #     while batch_size > 0:
-    #         if can_allocate_memory(batch_size): break
-    #         batch_size //= step_size
-
-    #     # Ensure at least one batch can be processed
-    #     return max(batch_size, 1)
-        
     
     
 class GPT(nn.Module, gptBase):

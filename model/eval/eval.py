@@ -24,7 +24,7 @@ class evalUtils(HFLM):
     """
     
         
-    def _detect_batch_size(self, requests = None, pos=0):
+    def _detect_batch_size(self, requests = None, pos:int =0):
 
         """
         Detect largest possible batch_size specifically for eval
@@ -41,8 +41,7 @@ class evalUtils(HFLM):
             torch.cuda.empty_cache()
             try:
                 x_test = torch.ones((batch_size, max_length), device=self.device).long()
-                for _ in range(5): 
-                    output = self(x_test)
+                for _ in range(5): output = self(x_test) 
                 return True
             
             except RuntimeError as e:
@@ -59,8 +58,15 @@ class evalUtils(HFLM):
         batch_size = 1
         while can_allocate_memory(batch_size): batch_size *= 2
 
-        # Decrement phase: fine-tune the batch '/  tsize by decreasing in steps of 1
-        while not can_allocate_memory(batch_size) and batch_size > 1: batch_size-=1
+        # Decrement phase: fine-tune the batch '/  tsize by decreasing in steps of 2
+        # while not can_allocate_memory(batch_size) and batch_size > 1: batch_size-=2
+        #search optimal bs in the form of a binary search
+        high, low = batch_size, batch_size // 2
+        while low < high - 1:
+            mid = (low + high) // 2
+            print('testing', mid)
+            if can_allocate_memory(mid): low = mid
+            else: high = mid
 
         # Ensure at least one batch can be processed
         final_batch_size =  max(batch_size, 1)
