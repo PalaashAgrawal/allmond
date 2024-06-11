@@ -1,7 +1,7 @@
 # aLLMond
 
 ## LLM Training Made Quick, Flexible and Easy
-
+### Build and run a complete LLM pipeline in <30 lines of code (including training, finetuning, instruction-tuning, evaluation) in any setting (single-GPU, multi-GPU, FSDP, (Q)LoRA, CPU offloading, etc.)
 
 
 A concise framework to train LLMs quickly. You only need focus on the most important parts (data and model, and maybe training strategies), without writing, or scrolling through unnecessary code. 
@@ -14,7 +14,7 @@ A concise framework to train LLMs quickly. You only need focus on the most impor
 
 
 ## Whats special about this repo?
-This repo is a very _clean pythonic implementation_ of LLM pipelines.
+This repo is a very _clean pythonic implementation_ of LLMs (unlike most repositories, filled with 1000s of lines of incomprehensible code).
 - _Clean_ means that different components are clearly separated, and initialized using intuitive function arguments. 
 - _Clean_ also means that training scripts are very minimal, which is a result of high level abstractions. This ensures you don't have to scroll through unnecessary code. 
 
@@ -24,13 +24,13 @@ Without going into much details here to keep this README concise, see [here](/do
 
 
 - Download any HF dataset quickly. 
-- Define custom architectures, or download any HF model (for continual pretraining).
+- Define custom architectures, or download any HF model (for continual pretraining), while using a common API template.
 - Automatic setup of Data, Model and Tokenizer using high-level APIs.
 - Easy setup of Distributed Training (single-GPU, DDP, FSDP, CPU Offloading etc.).
 - Finetune pretrained Huggingface models in (Q)LORA setting.
 - Inbuilt support for Mixed Precision Training.
 - Automatic checkpointing of Model based on best validation loss.
-- Evaluate models on benchmarks. 
+- Evaluate models on benchmarks easily. 
 
 
 
