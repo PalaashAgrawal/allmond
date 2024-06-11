@@ -1,8 +1,5 @@
-
-
-
 #not for PR
-from .callbacks import SkipToIter, QLORA_resolve, get_largest_batch_size
+from .callbacks import SkipToIter, QLORA_resolve, GetLargestBatchSize
 from .fastai_learner_mod import LLMLearnerBase
 from fastai.learner import *   
 from fastai.text.all import * #this is a very lazy import. Basically imports everything
@@ -27,7 +24,7 @@ class LLMLearner(LLMLearnerBase):
             cbs = L(cbs) + SkipToIter(start_epoch, start_iter) 
         
         if find_largest_batch_size:
-            cbs = L(cbs) + get_largest_batch_size()
+            cbs = L(cbs) + GetLargestBatchSize()
             
         #PAg: not for PR
         cbs = L(cbs)+QLORA_resolve(getattr(self.model, 'qlora', False))
@@ -48,3 +45,5 @@ class LLMLearner(LLMLearnerBase):
         if checkpoint.exists():
             self.load(file, device = device)
             print(f"Resuming training from iteration {getattr(self, 'resumeIter', {}).get('iter', 0)} of epoch {getattr(self, 'resumeIter', {}).get('epoch', 0)}  using checkpoint {str(checkpoint)}")
+
+       

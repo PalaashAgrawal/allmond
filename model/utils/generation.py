@@ -46,7 +46,7 @@ class GenerationBase:
     
     
     @torch.no_grad()
-    def generate(self, inp, max_new_tokens, temperature = 1.0, top_k = None, 
+    def generate(self, inp, max_new_tokens=10, temperature = 1.0, top_k = None, 
                  return_input = False,  
                  return_logprobs: Optional[bool] = False):
         """
@@ -79,9 +79,6 @@ class GenerationBase:
         return_logprobs : bool, optional, default=False
             Whether to return the log probabilities of the generated tokens.
     
-        
-        
-        
         TODO: 
         
         MOST IMP: need to modify probability calculation for input tokens themselves (as in openai example), for lm-eval-harness. 
@@ -104,7 +101,6 @@ class GenerationBase:
 
         # Initialize logprobs if required
         if return_logprobs:
-            self.is_greedy = True
             logprobs = np.array([])
 
             # Calculate log probabilities for input tokens
@@ -130,7 +126,6 @@ class GenerationBase:
 
             if return_logprobs:
                 logprobs = np.append(logprobs, torch.log(probs[torch.arange(probs.shape[0]), idx_next.squeeze()]).cpu().numpy())
-                self.is_greedy = self.is_greedy and torch.argmax(probs, dim=-1) == idx_next.squeeze()
 
             idx = torch.cat((idx, idx_next), dim=1)
 
