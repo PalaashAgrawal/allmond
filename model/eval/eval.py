@@ -16,6 +16,7 @@ from tqdm import tqdm
 import json
 from fastai.torch_core import rank_distrib, num_distrib
 import gc
+import warnings
 
 class evalUtils(HFLM):
     """
@@ -262,6 +263,10 @@ class evalBase(evalUtils):
         self.batch_sizes = {}
         self.max_batch_size = 128
         self.cache_hook = CacheHook(None)
+        
+        #if device is CPU, raise warning
+        if self.device == torch.device('cpu'):
+            warnings.warn('Evaluation on CPU is not recommended, since it is Extremely Slow. Please run on GPU for optimal performance by initializing the model on GPU using .cuda()')
         
         print('running eval. This may take a few minutes just to setup...')    
         results = simple_evaluate(self, tasks = tasks, batch_size = 'auto')
