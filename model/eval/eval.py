@@ -17,6 +17,7 @@ import json
 from fastai.torch_core import rank_distrib, num_distrib
 import gc
 import warnings
+import transformers
 
 class evalUtils(HFLM):
     """
@@ -64,7 +65,6 @@ class evalUtils(HFLM):
         high, low = batch_size, batch_size // 2
         while low < high - 1:
             mid = (low + high) // 2
-            print('testing', mid)
             if can_allocate_memory(mid): low = mid
             else: high = mid
 
@@ -159,7 +159,8 @@ class evalUtils(HFLM):
                 inplens.append(inplen)
                 
             batched_inps = pad_and_concat(padding_len_inp, inps, padding_side="right")  # [batch, padding_len_inp]
-            multi_logits = F.log_softmax(self(batched_inps), dim=-1)  # [batch, padding_length (inp or cont), vocab]
+            
+            with torch.no_grad(): multi_logits = F.log_softmax(self(batched_inps), dim=-1)  # [batch, padding_length (inp or cont), vocab]
             
             for (request_str, ctx_tokens, _), logits, inplen, cont_toks in zip(
                 chunk, multi_logits, inplens, cont_toks_list
@@ -211,7 +212,39 @@ class evalUtils(HFLM):
         pbar.close()
         return re_ord.get_original(res)
                 
-                
+    
+    
+    def _model_generate(self, context, max_length, stop, **generation_kwargs):
+        # temperature = 0.0 if not set
+        # if do_sample is false and temp==0.0:
+        # remove temperature, as do_sample=False takes care of this
+        # and we don't want a warning from HF
+        generation_kwargs["temperature"] = generation_kwargs.get("temperature", 0.0)
+        # do_sample = generation_kwargs.get("do_sample", None)
+
+        # The temperature has to be a strictly positive float -- if it is 0.0, use greedy decoding strategies
+        # if generation_kwargs.get("temperature") == 0.0 and do_sample is None:
+        #     generation_kwargs["do_sample"] = do_sample = False
+
+        # if do_sample is False and generation_kwargs.get("temperature") == 0.0:
+        #     generation_kwargs.pop("temperature")
+            
+        # build stopping criteria
+        # stopping_criteria = stop_sequences_criteria(
+        #     self.tokenizer, stop, context.shape[1], context.shape[0]
+        # )
+        # print('starting for', max_length)
+        return self.model.generate(
+            inps=context,
+            max_new_tokens=max_length,
+            # stopping_criteria=stopping_criteria,
+            temperature = generation_kwargs["temperature"] 
+            # pad_token_id=self.tokenizer.pad_token_id,
+            # use_cache=True,
+            # **generation_kwargs,
+        )
+        
+        
     def get_model_info(self):
         return {"model_num_parameters": self.num_params,
                 "model_name": str(self)}
@@ -269,6 +302,10 @@ class evalBase(evalUtils):
         self.batch_sizes = {}
         self.max_batch_size = 128
         self.cache_hook = CacheHook(None)
+        self.batch_size_per_gpu = 'auto'
+        self.AUTO_MODEL_CLASS = transformers.AutoModelForCausalLM
+        self.truncation = False
+        self.add_bos_token = False
         
         #if device is CPU, raise warning
         if self.device == torch.device('cpu'):

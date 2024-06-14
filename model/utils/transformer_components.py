@@ -43,10 +43,9 @@ class MultiHeadSelfAttention(nn.Module):
         # Combine causal mask and attention mask if necessary
         if attention_mask is not None:
             attention_mask = attention_mask.expand(batch_size, seq_length, seq_length)  # (batch_size, seq_length, seq_length)
-            if causal_mask is not None:
+            if causal_mask is not None: 
                 attention_mask = causal_mask.unsqueeze(0) * attention_mask
-            # else:
-            #     attention_mask = attention_mask
+
         else:
             attention_mask = causal_mask.unsqueeze(0) if causal_mask is not None else None
         

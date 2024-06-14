@@ -46,7 +46,7 @@ class GenerationBase:
     
     
     @torch.no_grad()
-    def generate(self, inp, max_new_tokens=10, temperature = 1.0, top_k = None, 
+    def generate(self, inps, max_new_tokens=10, temperature = 1.0, top_k = None, 
                  return_input = False,  
                  return_logprobs: Optional[bool] = False):
         """
@@ -57,7 +57,7 @@ class GenerationBase:
         By default, returns list of newly generated tokens (along with input tokens), unless one of return_* is specified
 
         Parameters:
-        inp : str, List[str], torch.Tensor() of size (b,t),  List[int], List[List[int]]
+        inps : str, List[str], torch.Tensor() of size (b,t),  List[int], List[List[int]]
             The input tokens to condition on. If a string, it will be tokenized using the model's tokenizer. 
             If a tensor, it should be of shape (b,t) where b is the batch size and t is the sequence length.
             
@@ -80,24 +80,16 @@ class GenerationBase:
             Whether to return the log probabilities of the generated tokens.
     
         TODO: 
-        
-        MOST IMP: need to modify probability calculation for input tokens themselves (as in openai example), for lm-eval-harness. 
-        
-        1. padding mask for the input sequence., so that batch processing is possible
+        1. Stop criteria for generation. Also implement that in eval _model_generate function
+                
+        (DONE) 1. padding mask for the input sequence., so that batch processing is possible
         2. Versatility to return tokens, logits or logprobs
         
-        
-        
-        Testcases
-        1. Check if the function returns the correct number of tokens
-        2. does it work for temperture 0 
-        3. does it work for top_k
-            
         """
         
         #input can be a single string, single list of ints, list of strings, tensor of shape (b,t) or list of list of ints
         self.ret_type = None
-        idx = self._prepare_generation_input(inp)
+        idx = self._prepare_generation_input(inps)
 
         # Initialize logprobs if required
         if return_logprobs:
@@ -105,7 +97,7 @@ class GenerationBase:
 
             # Calculate log probabilities for input tokens
             idx_cond = idx if idx.shape[1] <= self.block_size else idx[:, -self.block_size:]
-            logits = self(idx_cond)  # b, t, vocab_size
+            with torch.no_grad(): logits = self(idx_cond)  # b, t, vocab_size
             logits = logits[:, -idx.shape[1]:, :] / (temperature + 1e-20)  # To avoid 0 division error if temperature = 0.0
             input_probs = F.log_softmax(logits, dim=-1)
             input_logprobs = input_probs.gather(2, idx.unsqueeze(-1)).squeeze(-1).cpu().numpy()
@@ -128,6 +120,7 @@ class GenerationBase:
                 logprobs = np.append(logprobs, torch.log(probs[torch.arange(probs.shape[0]), idx_next.squeeze()]).cpu().numpy())
 
             idx = torch.cat((idx, idx_next), dim=1)
+            if idx_next.item() == self.tokenizer.eos_token_id: break #stopping criteria
 
         if return_logprobs: return logprobs
         

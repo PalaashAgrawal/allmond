@@ -172,8 +172,13 @@ class Tokenizer(BaseTokenizer):
         
         Returns: str or list of str: The decoded text representation of the input tokens.
         """
-        if hasattr(self, 'module'): return self.module.batch_decode(tokens, **kwargs) #if the tokenizer is from huggingface, use the decode method of the huggingface tokenizer
         
+        if hasattr(self, 'module'): 
+            #if tokens is not iterable, make it iterable
+            # if not isinstance(tokens, (list, tuple)): tokens = [tokens]
+            # return self.module.batch_decode(tokens, **kwargs) #if the tokenizer is from huggingface, use the decode method of the huggingface tokenizer
+            return self.module.decode(tokens, **kwargs) #if the tokenizer is from huggingface, use the decode method of the huggingface tokenizer
+            
         return self.encoder.decode_batch(tokens) if batch else self.encoder.decode(tokens)
     
     
@@ -209,7 +214,17 @@ class Tokenizer(BaseTokenizer):
         
         
         
-    
+    def __getattr__(self, name: str):
+        f'if the attribute is not found, check if it is in the module attribute'
+        if hasattr(self, 'module'): return getattr(self.module, name)
+        
+    def __call__(self, *args, **kwargs):
+        if hasattr(self, 'module'): return self.module(*args, **kwargs)
+        return self.encode(*args, **kwargs)
+        
+        
+        
+        
     
     
             
