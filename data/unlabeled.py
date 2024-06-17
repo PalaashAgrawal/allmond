@@ -11,6 +11,7 @@ from pathlib import Path
 
 from .config import config_dict
 from model.tokenizer import Tokenizer
+from typing import Union, List, Tuple
 
 
 
@@ -33,16 +34,22 @@ class unlabeledDataset():
         By default, saves the dataset into train.bin and val.bin (if config.split_into_train_val = True)
 
         Args:
-            dataset_name (str): The name of the dataset to load. 
-                See dataset.list_datasets (https://huggingface.co/docs/datasets/v2.18.0/en/package_reference/loading_methods#datasets.list_datasets) 
-                for list of all available datasets
+            datasetConfig (class): A class containing the configuration for the dataset. 
+                The class should contain the following attributes:
+                    - dataset (str): The name of the dataset to download.
+                    - default_cache_dir (str): The directory to cache (save/read/write) the dataset.
+                    - split_into_train_val (bool): Whether to split the dataset into training and validation sets. Defaults to True.
+                    - split_name (str): The name to use for the validation set. Defaults to 'val'.
+                    - kwargs (dict): Additional keyword arguments to pass to the dataset loader. Defaults to {}.
+                    - split_pct (float): The percentage of the dataset to use for the training set. Defaults to None.
+                    
             n_proc (int): The number of processes to use for loading the dataset.
             cache_dir (str): The directory to cache (save/read/write) the dataset. Defaults to None. If cache_dir is None, value from config class is used. 
             **kwargs: Additional keyword arguments to pass to the dataset loader.
         """
         
         
-        self.config = datasetConfig
+        self.config = self.verify_dataconfig(datasetConfig)
         self.n_proc = n_proc
         self.cache_dir = Path(cache_dir or datasetConfig.default_cache_dir).expanduser()
         
@@ -51,17 +58,15 @@ class unlabeledDataset():
         self.splits = ['train'] + [getattr(self.config, 'split_name', 'val')] if getattr(self.config, 'split_into_train_val', True) else []
         
         
-        
+        print( self.config.dataset, 'mow',self.cache_dir)
         try: 
             #Assuming that datasets always returns "train" and "test"
-            self.dataset = datasets.load_dataset(
-                                                self.config.dataset_name,
-                                                data_dir=self.cache_dir,
-                                                num_proc=self.n_proc,
-                                                trust_remote_code=True,
-                                                cache_dir=self.cache_dir,
-                                                download_mode = 'force_redownload' if self.force_redownload else 'reuse_cache_if_exists',
-                                                **getattr(self.config, 'kwargs',{}),
+            self.dataset = datasets.load_dataset(   path = self.config.dataset,
+                                                    num_proc=self.n_proc,
+                                                    trust_remote_code=True,
+                                                    cache_dir=self.cache_dir,
+                                                    download_mode = 'force_redownload' if self.force_redownload else 'reuse_cache_if_exists',
+                                                    **getattr(self.config, 'kwargs',{}),
                                                 )
         except Exception as e:
             raise RuntimeError(f"Failed to load dataset: {e}")
@@ -69,7 +74,26 @@ class unlabeledDataset():
 
         self.cache_dir.mkdir(parents=True, exist_ok=True)
             
+    def verify_dataconfig(self, dataconfig):
+        """
+        Verify the data configuration class.
 
+        Args:
+            dataconfig (class): A class containing the configuration for the dataset.
+
+        Returns:
+            class: The data configuration class.
+
+        Raises:
+            AssertionError: If the data configuration class is not valid.
+
+        """
+        
+        assert hasattr(dataconfig, 'dataset'), f"dataconfig must have a 'dataset' attribute. Got {dataconfig}"
+        assert hasattr(dataconfig, 'default_cache_dir'), f"dataconfig must have a 'default_cache_dir' attribute. Got {dataconfig}"
+        assert hasattr(dataconfig, 'split_into_train_val'), f"dataconfig must have a 'split_into_train_val' attribute. Got {dataconfig}"
+        
+        return dataconfig
         
         
     def split(self, pct = 0.9995, val_name = 'val'):
@@ -117,21 +141,30 @@ class unlabeledDataset():
 
         """
         
-        def _text_extractor(f, example):
+        def _text_extractor(f, example, key:Union[List, Tuple,set,  str]  = 'text'):
             """
             A wrapper function that can be customized to work with different process functions.
             It directly takes an example, allowing process_function to work on the text.
+            
+            Args:
+                f: A function that takes a string and returns a list of integers.
+                example: A dictionary containing the example.
+                key: The key name containing the text. Defaults to 'text'. 
+                    Key can be a string, list or tuple. If a list or tuple, the function will extract the text from each key and concatenate them. 
             """
-            return f(example['text'])
+            assert callable(f), f"process_function must be callable. Got {type(f)}"
+            assert key in example, f"Key {key} not found in example. Pass the key(s) that you want to extract and save the text from."
+            
+            if isinstance(key, (list, tuple)): return f(' '.join([example[k] for k in key]))
+            return f(example[key])
 
-        tokens = self.dataset.map(lambda example: _text_extractor(encoder_fn, example),
-                                       remove_columns=['text'],
-                                       desc="tokenizing the splits",
+        tokens = self.dataset.map(lambda example: _text_extractor(encoder_fn, example, getattr(self.config, 'columns', 'text')),
+                                    #    remove_columns=['text'], #i dont think should be here
+                                       desc="tokenizing dataset",
                                        num_proc=self.n_proc)
         return tokens
 
-        
-         
+
         
     def process_dataset(self, encoder, save_tokens_to_disk=True, save_path=None):
         """
@@ -240,12 +273,8 @@ class unlabeledDataset():
             return False
         
         
-        
-        
         return not self.force_redownload and all((self.cache_dir/f'{split}.bin').exists() for split in self.splits)
     
-
-
 
 
 def download_dataset(dataset:str, encoder: Tokenizer, force_redownload = False):
