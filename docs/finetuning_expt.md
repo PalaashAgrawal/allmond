@@ -28,7 +28,7 @@ gsm8K
 
 
 Datasets (SFT): see (https://huggingface.co/collections/HuggingFaceH4/awesome-sft-datasets-65788b571bf8e371c4e4241a)
-1. tiedong/goat
+1. tiedong/goat #this is a labeled dataset, we currently dont support that 
 2. meta-math/MetaMathQA
 3. TIGER-Lab/MathInstruct
 3. openai/gsm8k

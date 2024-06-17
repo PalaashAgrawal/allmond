@@ -115,8 +115,7 @@ class Tokenizer(BaseTokenizer):
         self.n_vocab = self.encoder.n_vocab #required
         self.eot_token = self.encoder.eot_token #required. eot_token is an integer (not string)
         self.pad_token = self.eot_token #setting as eot_token. Tiktoken doesnt explicitly have a pad token. Doesnt matter. Anyways, we will ignore the padded tokens in the forward function. 
-    
-    
+        self.module = None #this is not a huggingface tokenizer. So, we set it to None.
     
     
     def encode(self, text: str, ignore_special_tokens = True, batch=False, **kwargs):
@@ -139,7 +138,7 @@ class Tokenizer(BaseTokenizer):
         
         """
         
-        if hasattr(self, 'module'): return self.module.encode(text, **kwargs) #if the tokenizer is from huggingface, use the encode method of the huggingface tokenizer
+        if self.module is not None: return self.module.encode(text, **kwargs) #if the tokenizer is from huggingface, use the encode method of the huggingface tokenizer
         
         if batch: return self.encoder.encode_ordinary_batch(text) if ignore_special_tokens else self.encoder.encode_batch(text) 
         else: return self.encoder.encode_ordinary(text) if ignore_special_tokens else self.encoder.encode(text)
@@ -215,8 +214,17 @@ class Tokenizer(BaseTokenizer):
         
         
     def __getattr__(self, name: str):
-        f'if the attribute is not found, check if it is in the module attribute'
-        if hasattr(self, 'module'): return getattr(self.module, name)
+        """
+        If the attribute is not found, check if it is in the module attribute.
+        """
+        if name == 'module':
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+        
+        if hasattr(self.module, name):
+            return getattr(self.module, name)
+        
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+
         
     def __call__(self, *args, **kwargs):
         if hasattr(self, 'module'): return self.module(*args, **kwargs)

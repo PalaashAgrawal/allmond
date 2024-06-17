@@ -141,7 +141,7 @@ class unlabeledDataset():
 
         """
         
-        def _text_extractor(f, example, key:Union[List, Tuple,set,  str]  = 'text'):
+        def _text_extractor(f, example, key:Union[set,  str]  = 'text'):
             """
             A wrapper function that can be customized to work with different process functions.
             It directly takes an example, allowing process_function to work on the text.
@@ -153,12 +153,14 @@ class unlabeledDataset():
                     Key can be a string, list or tuple. If a list or tuple, the function will extract the text from each key and concatenate them. 
             """
             assert callable(f), f"process_function must be callable. Got {type(f)}"
-            assert key in example, f"Key {key} not found in example. Pass the key(s) that you want to extract and save the text from."
-            
+            if isinstance(key, (set)): 
+                assert key.issubset(set(example.keys())), f"Key(s) {key} not found in example. Pass the key(s) that you want to extract and save the text from."
+            else:
+                assert key in example, f"Key {key} not found in example. Pass the key(s) that you want to extract and save the text from."
             if isinstance(key, (list, tuple)): return f(' '.join([example[k] for k in key]))
             return f(example[key])
 
-        tokens = self.dataset.map(lambda example: _text_extractor(encoder_fn, example, getattr(self.config, 'columns', 'text')),
+        tokens = self.dataset.map(lambda example: _text_extractor(encoder_fn, example, set(getattr(self.config, 'columns', 'text'))),
                                     #    remove_columns=['text'], #i dont think should be here
                                        desc="tokenizing dataset",
                                        num_proc=self.n_proc)
