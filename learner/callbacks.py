@@ -171,8 +171,10 @@ class GetLargestBatchSize(Callback):
         
         def can_allocate_memory(batch_size):
             try:
-                model = self.learn.model 
-                x_test, y_test = torch.ones((batch_size, model.block_size), device=self.device).long(), torch.ones((batch_size, model.block_size), device=self.device).long()
+                model = self.learn.model
+                block_size = model.module.block_size if isinstance(model,nn.parallel.distributed.DistributedDataParallel) else model.block_size
+                 
+                x_test, y_test = torch.ones((batch_size, block_size), device=self.device).long(), torch.ones((batch_size, block_size), device=self.device).long()
                 # Run a forward pass
                 output = model(x_test)
                 loss = self.learn.loss_func(output, y_test)

@@ -18,12 +18,13 @@ from fastai.distributed import *
 from fastai.callback.wandb import *
 import wandb
 
+training_run_info = "phi3-qlora-orcamath"
 #________________________________________wandb____________________________________________
-log_wandb = False #set to False if you dont want to log progress to W&B
+log_wandb = True #set to False if you dont want to log progress to W&B
 
 project = 'tinylm' #for wandb
 dataset = "orcamath"
-mode = 'scratch'
+mode = 'finetune'
 # ________________________________________hyperparams and settings_________________________
 
 bs=1 #each GPU gets bs = 1, works good for a 24GB GPU
@@ -36,8 +37,7 @@ qlora = True
 #________________________________________Model_____________________________________________
 
 #by default, block_size should be set to the max sequence length of the model, but it may cause OOM errors. So, set it to a lower value
-# model = GPT.from_hf(model_id, enable_qlora = qlora)
-model = GPT()
+model = GPT.from_hf(model_id, enable_qlora = qlora)
 #________________________________________data______________________________________________
 
 train_path, valid_path = rank0_first(lambda: download_dataset(dataset = dataset, encoder = model.tokenizer)) #check if data exists, download only for rank0 GPU. 
