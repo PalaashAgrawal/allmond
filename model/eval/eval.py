@@ -285,7 +285,7 @@ class evalBase(evalUtils):
        
     
     
-    def evaluate(self, tasks:list[str], save_path = None):
+    def evaluate(self, tasks:list[str], save_path = None, batch_size = 'auto'):
         """
         run model evaluation on bencharks (as defined by Eleuther AI's lm-evaluation-harness)
         define your tasks as list of strings
@@ -312,7 +312,7 @@ class evalBase(evalUtils):
             warnings.warn('Evaluation on CPU is not recommended, since it is Extremely Slow. Please run on GPU for optimal performance by initializing the model on GPU using .cuda()')
         
         print('running eval. This may take a few minutes just to setup...')    
-        results = simple_evaluate(self, tasks = tasks, batch_size = 'auto')
+        results = simple_evaluate(self, tasks = tasks, batch_size = batch_size)
         if save_path is not None:
             pth = Path(save_path)/f'{str(self)}_eval.json'
             print('saving results at', pth)

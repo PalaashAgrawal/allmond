@@ -3,5 +3,6 @@ checkpoints
 wandb
 **__pycache__
 *.out
+**.pth
 
 
