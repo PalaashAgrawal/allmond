@@ -22,13 +22,6 @@ class save_checkpoints(Callback):
 
     Methods:
         after_step: Method called after each training step to save model checkpoints. 
-        
-        
-    
-    TODO: 
-    (DONE) remove hardcoding of cuda., and include device parameter 
-    (I think this is taken care of). Implement DDP device handling. 
-    
 
 
     """
@@ -78,8 +71,9 @@ class save_checkpoints(Callback):
                         
            
             
-            if not rank_distrib() and loss< self.best_valid_loss: #only save for 
+            if not rank_distrib() and loss<self.best_valid_loss: #only save for 
                 self.best_valid_loss = loss
+                print(f'saving checkpoint: {self.path/self.model_dir/(str(self.checkpoint_name)+".pth")} at iteration {self.learn.iter} with validation loss {loss}')
                 self.learn.save(f'{self.checkpoint_name}', with_opt=True, with_iter = True)                
         
 

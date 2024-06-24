@@ -25,7 +25,7 @@ class evalUtils(HFLM):
     """
     
         
-    def _detect_batch_size(self, requests = None, pos:int =0):
+    def _detect_batch_size(self, requests = None, pos:int =0, max_batch_size = 64):
 
         """
         Detect largest possible batch_size specifically for eval
@@ -41,6 +41,7 @@ class evalUtils(HFLM):
             gc.collect()
             torch.cuda.empty_cache()
             try:
+                print('trying batch size', batch_size)
                 x_test = torch.ones((batch_size, max_length), device=self.device).long()
                 for _ in range(5): output = self(x_test) 
                 return True
@@ -57,16 +58,17 @@ class evalUtils(HFLM):
                 
         # Start with a batch size of 2 and increase in powers of 2
         batch_size = 1
-        while can_allocate_memory(batch_size): batch_size *= 2
+        while batch_size<max_batch_size and can_allocate_memory(batch_size): batch_size *= 2
 
         # Decrement phase: fine-tune the batch '/  tsize by decreasing in steps of 2
         # while not can_allocate_memory(batch_size) and batch_size > 1: batch_size-=2
         #search optimal bs in the form of a binary search
-        high, low = batch_size, batch_size // 2
-        while low < high - 1:
-            mid = (low + high) // 2
-            if can_allocate_memory(mid): low = mid
-            else: high = mid
+        
+        # high, low = batch_size, batch_size // 2
+        # while low < high - 1:
+        #     mid = (low + high) // 2
+        #     if can_allocate_memory(mid): low = mid
+        #     else: high = mid
 
         # Ensure at least one batch can be processed
         final_batch_size =  max(batch_size, 1)
@@ -160,7 +162,8 @@ class evalUtils(HFLM):
                 
             batched_inps = pad_and_concat(padding_len_inp, inps, padding_side="right")  # [batch, padding_len_inp]
             
-            with torch.no_grad(): multi_logits = F.log_softmax(self(batched_inps), dim=-1)  # [batch, padding_length (inp or cont), vocab]
+            with torch.no_grad(): 
+                multi_logits = F.log_softmax(self(batched_inps), dim=-1)  # [batch, padding_length (inp or cont), vocab]
             
             for (request_str, ctx_tokens, _), logits, inplen, cont_toks in zip(
                 chunk, multi_logits, inplens, cont_toks_list
@@ -306,6 +309,8 @@ class evalBase(evalUtils):
         self.AUTO_MODEL_CLASS = transformers.AutoModelForCausalLM
         self.truncation = False
         self.add_bos_token = False
+        
+        self.train()
         
         #if device is CPU, raise warning
         if self.device == torch.device('cpu'):
