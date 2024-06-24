@@ -66,7 +66,7 @@ cbs = [check_and_save_model]
 
 if log_wandb:
     cbs.append(WandbCallback())
-    wandb.init(project=project, name = f"{id}_{str(model)}_{mode}")
+    wandb.init(project=project, name = f"{str(model)}_{dataset}_{mode}")
 
 
 learn = LLMLearner(dls, 

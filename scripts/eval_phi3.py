@@ -6,11 +6,11 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from model.gpt import GPT
-# from fastai.text.all import *
-# from data.unlabeled import download_dataset
-# from fastai.distributed import *
-# from learner.LLMLearner import LLMLearner
-# from data.loader import memmapDL
+from fastai.text.all import *
+from data.unlabeled import download_dataset
+from fastai.distributed import *
+from learner.LLMLearner import LLMLearner
+from data.loader import memmapDL
 
 
 
@@ -42,6 +42,11 @@ model = GPT.from_hf('microsoft/Phi-3-mini-4k-instruct', enable_qlora = True)
 
 # learn.load(Path('Phi-3-mini-25.2M'))
 
+
+
+
+state_dict = torch.load('checkpoints/Phi-3-mini-4k-instruct.pth')
+model.load_state_dict(state_dict)
 
 tasks = [
     'mmlu_abstract_algebra', 
