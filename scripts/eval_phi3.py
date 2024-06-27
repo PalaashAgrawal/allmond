@@ -45,8 +45,9 @@ model = GPT.from_hf('microsoft/Phi-3-mini-4k-instruct', enable_qlora = True)
 
 
 
-state_dict = torch.load('checkpoints/Phi-3-mini-4k-instruct.pth')
-model.load_state_dict(state_dict)
+state_dict = torch.load('checkpoints/gpt/Phi-3-mini-25.2M.pth')
+model.load_state_dict(state_dict['model'])
+
 
 tasks = [
     'mmlu_abstract_algebra', 
