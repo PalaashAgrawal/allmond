@@ -158,8 +158,13 @@ class unlabeledDataset():
                 assert key in example, f"Key {key} not found in example. Pass the key(s) that you want to extract and save the text from."
             if isinstance(key, (list, tuple)): return f(' '.join([example[k] for k in key]))
             return f(example[key])
-
-        tokens = self.dataset.map(lambda example: _text_extractor(encoder_fn, example, tuple(getattr(self.config, 'columns', 'text'))),
+        
+        def _extract_text_keys(config):
+            keys = getattr(self.config, 'columns', ('text',))
+            if isinstance(keys, str): keys = (keys,)
+            return tuple(keys)
+        
+        tokens = self.dataset.map(lambda example: _text_extractor(encoder_fn, example, _extract_text_keys(self.config)),
                                     #    remove_columns=['text'], #i dont think should be here
                                        desc="tokenizing dataset",
                                        num_proc=self.n_proc)
