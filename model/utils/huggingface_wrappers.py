@@ -11,10 +11,9 @@ import logging
 def check_model_validity(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        model = func(*args, **kwargs)
-        
+        model = func(*args, **kwargs)        
     
-        assert isinstance(model,nn.Module), 'Not a valid model. Model should be a nn.Module instance. Huggingface models by default are nn.Module instances'
+        assert isinstance(model,nn.Module), f'{model.__class__} is not a valid model. Model should be a nn.Module instance. Huggingface models by default are nn.Module instances'
         assert hasattr(model,'cfg_dict') and isinstance(model.cfg_dict, dict), f"Each Huggingface model has a config dict, although it may come with different names. Make sure that your model's configs are stored in the `cfg_dict` attribute as a dictionary."
         assert 'model_name' in model.cfg_dict, f'Make sure that config should have a key "model_name" which is a string. This is used for Logging purposes. '
         assert 'block_size' in model.cfg_dict, f'Make sure that config should have a key "block_size" which is an integer. This is essentially the maximum sequence length of the model. Common names for this are "max_position_embeddings" or "max_seq_len" '
@@ -139,6 +138,7 @@ class HuggingFaceModelLoader:
 
 class HuggingfaceModelWrappers(HuggingFaceModelLoader):
     supported_hf_models = ['microsoft/Phi-3-mini-4k-instruct',
+                           'meta-llama/Meta-Llama-3-8B',
                            #add more models here
                         ]
     
@@ -150,6 +150,7 @@ class HuggingfaceModelWrappers(HuggingFaceModelLoader):
         """
         if model_identifier not in self.supported_hf_models: raise ValueError(f"Unsupported model identifier. Supported model identifiers are: {self.supported_hf_models}")
         if model_identifier=='microsoft/Phi-3-mini-4k-instruct':    return self.phi3_mini(model_identifier, **kwargs)
+        if model_identifier=='meta-llama/Meta-Llama-3-8B':    return self.llama3_8b(model_identifier, **kwargs) 
         #create more methods like above for each model
     
     
@@ -165,6 +166,24 @@ class HuggingfaceModelWrappers(HuggingFaceModelLoader):
                          "model_name": "Phi-3-mini",
                          "fsdp_transformer_layer_cls_to_wrap": "Phi3DecoderLayer",
                          "block_size": cfg.max_position_embeddings, #phi3Config defines context length as max_position_embeddings. "block_size" is required for dataloader declaration. 
+                         "tokenizer": tokenizer,
+                         }        
+        
+        return _model
+    
+    
+    def llama3_8b(self, model_identifier, **kwargs):
+
+        _model, cfg, tokenizer = self.get_hf_components(model_identifier, **kwargs)
+        tokenizer.n_vocab = len(tokenizer.vocab) #get_vocab_size does not account for special added tokens, somehow. So we custom define the vocab size.
+        tokenizer = Tokenizer.from_huggingface(tokenizer, eot_token_name='eos_token_id', n_vocab_name='n_vocab', pad_token_name = 'pad_token_id') #instance of our custom defined Tokenizer class
+
+        #encoder and decoder functions already defined. 
+        
+        _model.cfg_dict = {**cfg.to_dict(),
+                         "model_name": "Llama-3-8B",
+                         "fsdp_transformer_layer_cls_to_wrap": "LlamaAttention",
+                         "block_size": cfg.hidden_size, #phi3Config defines context length as max_position_embeddings. "block_size" is required for dataloader declaration. 
                          "tokenizer": tokenizer,
                          }        
         
