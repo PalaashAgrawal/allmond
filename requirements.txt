@@ -6,7 +6,7 @@ tiktoken==0.6.0
 wandb
 
 transformers
-flash-attn #requires >CUDA 11.6
+flash-attn
 deepspeed
 bitsandbytes #for QLoRA
 lm-eval

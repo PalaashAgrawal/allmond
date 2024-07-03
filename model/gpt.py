@@ -137,6 +137,7 @@ class GPT(nn.Module, gptBase):
         assert isinstance(idx, torch.Tensor), f'forward function should only have one argument as input, i.e., the input tensor of shape (bs, seq_len)'
        
         ret =  self.forward_fn(idx)
+        
         assert isinstance(ret, torch.Tensor), f'forward function should return a tensor. Instead got {type(ret)}'
         
         return ret
@@ -189,8 +190,10 @@ class GPT(nn.Module, gptBase):
         for key, value in hf_model.cfg_dict.items(): setattr(instance, key, value)
         #storing the model parameters in the class instance
         instance.base_model = hf_model  
-        #defining the forward_fn for proper forwarding. 
-        instance.forward_fn = lambda x: instance.base_model(x).logits
+        
+        #defining default forward_fn for proper forwarding. 
+        if not hasattr(instance, 'forward_fn'): 
+            instance.forward_fn = lambda x: instance.base_model(x)
         
         for key, value in kwargs.items(): setattr(instance, key, value)
         
