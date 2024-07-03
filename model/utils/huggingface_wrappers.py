@@ -7,6 +7,9 @@ from accelerate import PartialState
 import os
 import logging
 
+from torch.cuda.amp import autocast
+
+
         
 def check_model_validity(func):
     @wraps(func)
@@ -159,14 +162,16 @@ class HuggingfaceModelWrappers(HuggingFaceModelLoader):
         _model, cfg, tokenizer = self.get_hf_components(model_identifier, **kwargs)
         tokenizer.n_vocab = len(tokenizer.vocab) #get_vocab_size does not account for special added tokens, somehow. So we custom define the vocab size.
         tokenizer = Tokenizer.from_huggingface(tokenizer, eot_token_name='eos_token_id', n_vocab_name='n_vocab', pad_token_name = 'pad_token_id') #instance of our custom defined Tokenizer class
-
         #encoder and decoder functions already defined. 
+        
+        _model.forward_fn = lambda x: _model(x).logits
         
         _model.cfg_dict = {**cfg.to_dict(),
                          "model_name": "Phi-3-mini",
                          "fsdp_transformer_layer_cls_to_wrap": "Phi3DecoderLayer",
                          "block_size": cfg.max_position_embeddings, #phi3Config defines context length as max_position_embeddings. "block_size" is required for dataloader declaration. 
                          "tokenizer": tokenizer,
+                         "forward_fn": _model.forward_fn, 
                          }        
         
         return _model
@@ -178,13 +183,22 @@ class HuggingfaceModelWrappers(HuggingFaceModelLoader):
         tokenizer.n_vocab = len(tokenizer.vocab) #get_vocab_size does not account for special added tokens, somehow. So we custom define the vocab size.
         tokenizer = Tokenizer.from_huggingface(tokenizer, eot_token_name='eos_token_id', n_vocab_name='n_vocab', pad_token_name = 'pad_token_id') #instance of our custom defined Tokenizer class
 
-        #encoder and decoder functions already defined. 
+        # #encoder and decoder functions already defined. 
+        
+        
+        def call(*args, **kwargs):
+            with autocast(): return _model(*args, **kwargs).logits
+        
+        _model.forward_fn = call            
+        
+        
         
         _model.cfg_dict = {**cfg.to_dict(),
                          "model_name": "Llama-3-8B",
                          "fsdp_transformer_layer_cls_to_wrap": "LlamaAttention",
                          "block_size": cfg.hidden_size, #phi3Config defines context length as max_position_embeddings. "block_size" is required for dataloader declaration. 
                          "tokenizer": tokenizer,
+                         "forward_fn": _model.forward_fn,
                          }        
         
         return _model

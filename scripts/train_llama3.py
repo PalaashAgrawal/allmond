@@ -18,6 +18,7 @@ from fastai.distributed import *
 from fastai.callback.wandb import *
 import wandb
 
+torch.backends.cuda.enable_flash_sdp(False)
 #________________________________________wandb____________________________________________
 log_wandb = False #set to False if you dont want to log progress to W&B
 
@@ -39,9 +40,9 @@ model = GPT.from_hf(model_id, enable_qlora = qlora)
 #________________________________________data______________________________________________
 
 train_path, valid_path = rank0_first(lambda: download_dataset(dataset = dataset, encoder = model.tokenizer)) #check if data exists, download only for rank0 GPU. 
-train_dl = memmapDL(train_path, bs = bs, block_size=model.block_size, 
+train_dl = memmapDL(train_path, bs = bs, block_size=200, 
                       dtype=model.tokenizer._get_numpy_dtype())
-valid_dl = memmapDL(valid_path, bs = bs, block_size=model.block_size, 
+valid_dl = memmapDL(valid_path, bs = bs, block_size=200, 
                       dtype=model.tokenizer._get_numpy_dtype(), 
                       sample_size = valid_sampler_size)
 
