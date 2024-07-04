@@ -154,54 +154,163 @@ class SkipToIter(Callback):
             raise CancelBatchException
         
 
+# class GetLargestBatchSize(Callback):
+#     """
+#     TODO: can get_largest_bs be merged with _detect_batch_size in model.eval.eval.py?
+#     """
+#     order = 100  # we want this to be executed at the very end. At this point, model has been assigned to appropriate 
+#     def can_allocate_memory(self, batch_size, block_size = None):
+#         try:
+#             model = self.learn.model
+#             block_size = block_size or (model.module.block_size if isinstance(model,nn.parallel.distributed.DistributedDataParallel) else model.block_size)
+                
+#             x_test, y_test = torch.ones((batch_size, block_size), device=self.device).long(), torch.ones((batch_size, block_size), device=self.device).long()
+#             # Run a forward pass
+#             output = model(x_test)
+#             loss = self.learn.loss_func(output, y_test)
+#             loss.backward()
+#             return True
+#         except RuntimeError as e:
+            
+#             if "out of memory" in str(e): 
+#                 return False
+#             else: raise e
+#         finally:
+#             self.learn.opt.zero_grad()
+            
+    
+#     def find_optimal_bs_binary_search(self, max_bs, block_size = None):
+#          # Decrement phase: fine-tune the batch '/  tsize by decreasing in steps of 1
+#         # while not can_allocate_memory(batch_size) and batch_size > 1: batch_size-=1
+#         high, low = max_bs, max_bs // 2
+#         while low < high - 1:
+#             mid = (low + high) // 2
+#             if self.can_allocate_memory(mid, block_size): low = mid
+#             else: high = mid
+            
+#         return low
+    
+#     def find_optimal_block_size_binary_search(self, max_bs, block_size = None):
+#         high, low = block_size, block_size // 2
+#         while low < high - 1:
+#             mid = (low + high) // 2
+#             if self.can_allocate_memory(max_bs, mid): low = mid
+#             else: high = mid
+            
+#         return low
+        
+        
+#     def get_largest_bs(self, max_bs = 64):
+        
+#         # Start with a batch size of 2 and increase in powers of 2
+#         batch_size = 1
+#         while batch_size<=max_bs and  self.can_allocate_memory(batch_size): batch_size *= 2
+        
+#         if batch_size>max_bs: return batch_size
+#         batch_size = self.find_optimal_bs_binary_search(batch_size)
+
+#         # Ensure at least one batch can be processed
+#         final_batch_size =  max(batch_size, 1)
+#         return final_batch_size
+    
+    
+#     def before_fit(self):
+#         print(f'Calculating maximum batch_size that can fit the device {self.learn.model.device}')
+#         bs = self.get_largest_bs()
+#         print(f'Detected largest batch_size to fit {self.learn.model.device} = {bs}')
+#         for dl in self.dls.loaders: dl.bs = bs
+#         #also store the batch size in the model, for evaluation purposes
+#         self.learn.model.bs = bs
+        
+        
+
+
 class GetLargestBatchSize(Callback):
     """
     TODO: can get_largest_bs be merged with _detect_batch_size in model.eval.eval.py?
     """
     order = 100  # we want this to be executed at the very end. At this point, model has been assigned to appropriate 
-    max_bs = 64
-   
-    def get_largest_bs(self):
-        
-        def can_allocate_memory(batch_size):
-            try:
-                model = self.learn.model
-                block_size = model.module.block_size if isinstance(model,nn.parallel.distributed.DistributedDataParallel) else model.block_size
-                 
-                x_test, y_test = torch.ones((batch_size, block_size), device=self.device).long(), torch.ones((batch_size, block_size), device=self.device).long()
-                # Run a forward pass
-                output = model(x_test)
-                loss = self.learn.loss_func(output, y_test)
-                loss.backward()
-                return True
-            except RuntimeError as e:
-                
-                if "out of memory" in str(e): 
-                    return False
-                else: raise e
-            finally:
-                self.learn.opt.zero_grad()
 
-        # Start with a batch size of 2 and increase in powers of 2
-        batch_size = 1
-        while can_allocate_memory(batch_size): batch_size *= 2
-
-        # Decrement phase: fine-tune the batch '/  tsize by decreasing in steps of 1
-        while not can_allocate_memory(batch_size) and batch_size > 1: batch_size-=1
-
-        # Ensure at least one batch can be processed
-        final_batch_size =  max(batch_size, 1)
-        return final_batch_size
+    def can_allocate_memory(self, batch_size, block_size=None):
+        try:
+            
+            model = self.learn.model
+            block_size = block_size or (model.module.block_size if isinstance(model, nn.parallel.distributed.DistributedDataParallel) else model.block_size)
+            print('trying batch_size =', batch_size, 'and window size', block_size)
+            
+            
+            x_test = torch.ones((batch_size, block_size), device=self.device).long()
+            y_test = torch.ones((batch_size, block_size), device=self.device).long()
+            # Run a forward pass
+            output = model(x_test)
+            loss = self.learn.loss_func(output, y_test)
+            loss.backward()
+            return True
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                return False
+            else:
+                raise e
+        finally:
+            self.learn.opt.zero_grad()
+            
+    def find_optimal_bs(self, max_bs, block_size=None):
+        if max_bs == 1: return 1
+        high, low = max_bs, max_bs // 2
+        while low < high - 1:
+            mid = (low + high) // 2
+            if self.can_allocate_memory(mid, block_size):
+                low = mid
+            else:
+                high = mid
+        return low
     
+    def find_optimal_block_size(self, batch_size, max_block_size):
+        while max_block_size > 1 and not self.can_allocate_memory(batch_size, max_block_size): max_block_size//=2
+        
+        high, low = max_block_size*2, max_block_size
+        while low < high - 1:
+            mid = (low + high) // 2
+            if self.can_allocate_memory(batch_size, mid): low = mid
+            else: high = mid
+            
+        return low
+
+    def get_largest_bs(self, max_bs=64):
+        block_size = self.learn.model.block_size
+        batch_size = 1
+        
+        # Check if even batch size 1 causes OOM
+        if not self.can_allocate_memory(1, block_size):
+            # Find the optimal block size using binary search
+            # print('Block size 1 causes OOM. Adjusting optimal block size')
+            block_size = self.find_optimal_block_size(1, block_size)
+            self.learn.model.block_size = block_size
+            
+        
+        # Start with a batch size of 2 and increase in powers of 2
+        while batch_size < max_bs and self.can_allocate_memory(batch_size, block_size): batch_size *= 2
+        
+        if batch_size==max_bs and self.can_allocate_memory(max_bs): return max_bs
+        
+        batch_size = self.find_optimal_bs(batch_size, block_size)
+
+        # # Ensure at least one batch can be processed
+        # final_batch_size = max(batch_size, 1)
+        return batch_size, block_size
     
     def before_fit(self):
         print(f'Calculating maximum batch_size that can fit the device {self.learn.model.device}')
-        bs = self.get_largest_bs()
-        print(f'Detected largest batch_size to fit {self.learn.model.device} = {bs}')
-        for dl in self.dls.loaders: dl.bs = bs
-        #also store the batch size in the model, for evaluation purposes
-        self.learn.model.bs = bs
+        bs, block_size = self.get_largest_bs()
+        print(f'Detected largest batch_size to fit {self.learn.model.device} = {bs} with block_size = {block_size}')
         
+        for dl in self.dls.loaders:
+            dl.bs = bs
+            dl.block_size = block_size
+        
+        self.learn.model.bs = bs
+        self.learn.model.block_size = block_size
+
         
         
         

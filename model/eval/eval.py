@@ -23,9 +23,26 @@ class evalUtils(HFLM):
     """
     Generously taken from EleutherAI's Huggingface interface in lm-evaluation-harness, since Huggingface's model interface is very similar to ours. (ie, model forward fn returns raw logits. )
     """
-    
+    def can_allocate_memory(self, batch_size, max_length):
+        gc.collect()
+        torch.cuda.empty_cache()
+        try:
+            print('trying batch size', batch_size)
+            x_test = torch.ones((batch_size, max_length), device=self.device).long()
+            output = self(x_test) 
+            return True
         
-    def _detect_batch_size(self, requests = None, pos:int =0, max_batch_size = 64):
+        except RuntimeError as e:
+            if "out of memory" in str(e): 
+                try:
+                    del x_test
+                    del output
+                except: pass
+                
+                return False
+            else: raise e                
+        
+    def _detect_batch_size(self, requests = None, pos:int =0, max_batch_size = 128):
 
         """
         Detect largest possible batch_size specifically for eval
@@ -33,46 +50,26 @@ class evalUtils(HFLM):
         if requests:
             _, context_enc, continuation_enc = requests[pos]
             max_length = len((context_enc + continuation_enc)[-(self.max_length + 1) :][:-1])
-        else: 
-            max_length = self.max_length
-
-            
-        def can_allocate_memory(batch_size):
-            gc.collect()
-            torch.cuda.empty_cache()
-            try:
-                print('trying batch size', batch_size)
-                x_test = torch.ones((batch_size, max_length), device=self.device).long()
-                for _ in range(5): output = self(x_test) 
-                return True
-            
-            except RuntimeError as e:
-                if "out of memory" in str(e): 
-                    try:
-                        del x_test
-                        del output
-                    except: pass
-                    
-                    return False
-                else: raise e
-                
+        else: max_length = self.max_length
+     
         # Start with a batch size of 2 and increase in powers of 2
         batch_size = 1
-        while batch_size<max_batch_size and can_allocate_memory(batch_size): batch_size *= 2
+        while batch_size<max_batch_size and self.can_allocate_memory(batch_size, max_length): batch_size *= 2
 
-        # Decrement phase: fine-tune the batch '/  tsize by decreasing in steps of 2
-        # while not can_allocate_memory(batch_size) and batch_size > 1: batch_size-=2
-        #search optimal bs in the form of a binary search
+        if batch_size == max_batch_size and self.can_allocate_memory(batch_size, max_length): 
+            # this means that max_batch_size fits on GPU. Great!!
+            return max_batch_size
         
-        # high, low = batch_size, batch_size // 2
-        # while low < high - 1:
-        #     mid = (low + high) // 2
-        #     if can_allocate_memory(mid): low = mid
-        #     else: high = mid
-
-        # Ensure at least one batch can be processed
-        final_batch_size =  max(batch_size, 1)
-        return final_batch_size
+        # search optimal bs in the form of a binary search
+        high, low = batch_size, batch_size // 2
+        while low < high - 1:
+            mid = (low + high) // 2
+            if self.can_allocate_memory(mid, max_length): low = mid
+            else: high = mid
+            
+        batch_size = low
+        
+        return batch_size
     
     
     def _batch_scheduler(self, pos, n_reordered_requests):
