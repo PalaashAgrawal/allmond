@@ -29,7 +29,7 @@ class evalUtils(HFLM):
         try:
             print('trying batch size', batch_size)
             x_test = torch.ones((batch_size, max_length), device=self.device).long()
-            output = self(x_test) 
+            for _ in range(5): output = self(x_test) #The code passes the input through the model 5 times to ensure that the model's memory usage stabilizes and reflects a more realistic scenario of repeated inference or training steps. 
             return True
         
         except RuntimeError as e:

@@ -13,8 +13,10 @@ from learner.LLMLearner import LLMLearner
 from data.loader import memmapDL
 
 
+# model_id = 'microsoft/Phi-3-mini-4k-instruct'
+model_id = 'meta-llama/Meta-Llama-3-8B'
 
-model = GPT.from_hf('microsoft/Phi-3-mini-4k-instruct', enable_qlora = True)
+model = GPT.from_hf(model_id, enable_qlora = True)
 
 
 # state_dict = torch.load('checkpoints/gpt/Phi-3-mini-25.2M.pth')

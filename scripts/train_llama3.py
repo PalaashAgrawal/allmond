@@ -32,7 +32,6 @@ model_id = 'meta-llama/Meta-Llama-3-8B'
 valid_sampler_size = 1000 #how many samples to use for validation. This is only used to check if validation loss is better than best_valid_loss, so that a checkpoint can be saved. Karpathy uses 200 random points
 validate_every = 1000 #1000 iterations, each iteration is bs*total_GPUs inputs
 qlora = True
-
 #________________________________________Model_____________________________________________
 
 #by default, block_size should be set to the max sequence length of the model, but it may cause OOM errors. So, set it to a lower value
@@ -40,9 +39,9 @@ model = GPT.from_hf(model_id, enable_qlora = qlora)
 #________________________________________data______________________________________________
 
 train_path, valid_path = rank0_first(lambda: download_dataset(dataset = dataset, encoder = model.tokenizer)) #check if data exists, download only for rank0 GPU. 
-train_dl = memmapDL(train_path, bs = bs, block_size=200, 
+train_dl = memmapDL(train_path, bs = bs, block_size=model.block_size, 
                       dtype=model.tokenizer._get_numpy_dtype())
-valid_dl = memmapDL(valid_path, bs = bs, block_size=200, 
+valid_dl = memmapDL(valid_path, bs = bs, block_size=model.block_size, 
                       dtype=model.tokenizer._get_numpy_dtype(), 
                       sample_size = valid_sampler_size)
 
@@ -83,4 +82,4 @@ learn = LLMLearner(dls,
 learn.check_and_load_learner(check_and_save_model.checkpoint_name, device = rank_distrib() if num_distrib() else None) #initialize each learner to respective device
 
 with learn.distrib_ctx(): 
-    learn.fit_one_cycle(1, 1e-4, find_largest_batch_size = True)
+    learn.fit_one_cycle(1, 1e-4, find_largest_batch_size = False)
