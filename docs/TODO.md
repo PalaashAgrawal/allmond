@@ -11,6 +11,7 @@
 - ~~TASK: generation on hf models is running on CPU. WHy???~~
 - ~~Automatic selection of largest batch size? (ElutherAI has functionality for that. Check the source code @[this link](https://github.com/EleutherAI/lm-evaluation-harness/blob/b24ac4b8eb7b32e30f45c16a5be78670dcb25f47/lm_eval/models/huggingface.py#L674)~~
 - ~~Create clean API for evaluation~~
+- Make GQA the default attention mechanism
 -  Instruct Finetuning of model (SFT)
 - (TOP PRIORITY) Alignment (using negative sampling)
     - Implement DPO/ORPO
